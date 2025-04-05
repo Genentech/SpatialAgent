@@ -1,0 +1,7 @@
+.vscode
+.DS_Store
+
+data
+models
+src/__pycache__/
+wandb
