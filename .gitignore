@@ -1,7 +1,9 @@
 .vscode
 .DS_Store
 
-data
 models
-src/__pycache__/
+__pycache__/
+.ipynb_checkpoints/
+*.egg-info/
 wandb
+experiments

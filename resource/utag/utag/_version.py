@@ -1,0 +1,1 @@
+version = __version__ = "0.1.2"  # Python 3.12 compatible fork

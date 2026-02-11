@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "utag"
+version = "0.1.2"
+description = "UTAG: Unsupervised discovery of Tissue Architecture with Graphs (Python 3.12 compatible fork)"
+readme = "README.md"
+license = {text = "GPL-3.0"}
+authors = [
+    {name = "Junbum Kim", email = "juk4007@med.cornell.edu"},
+    {name = "Andre Rendeiro", email = "afrendeiro@gmail.com"},
+]
+requires-python = ">=3.9"
+dependencies = [
+    "anndata",
+    "matplotlib",
+    "networkx",
+    "numpy",
+    "pandas",
+    "parc",
+    "parmap",
+    "scanpy",
+    "scikit-learn",
+    "scipy",
+    "squidpy",
+    "tqdm",
+]
+
+[project.urls]
+Homepage = "https://github.com/ElementoLab/utag"
+
+[tool.setuptools.packages.find]
+where = ["."]

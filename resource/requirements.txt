@@ -1,0 +1,83 @@
+# SpatialAgent Requirements
+# ==========================
+# Python 3.11 is recommended (better package compatibility than 3.12)
+#
+# Install packages:
+#   pip install -r requirements.txt
+#
+# Or use the setup script:
+#   ./setup_env.sh [env_name]
+# ==========================
+
+# Core LLM & Agent Framework
+langchain>=1.0,<2.0
+langchain-anthropic>=1.0,<2.0
+langchain-core>=1.0,<2.0
+langchain-openai>=0.3,<1.0
+langchain-google-genai>=2.0,<3.0
+google-genai>=1.0,<2.0  # Google Gemini web search
+langgraph>=1.0,<2.0
+langgraph-checkpoint>=2.0,<3.0
+langsmith>=0.3.45,<1.0
+
+# Data Science Core
+numpy>=2.0,<2.2  # Compatible with Numba 0.61.x used by Scanpy
+pandas>=2.2,<3.0
+scipy>=1.14,<2.0
+scikit-learn>=1.5,<2.0
+
+# Spatial Transcriptomics
+scanpy>=1.10,<2.0
+squidpy>=1.5.0
+anndata>=0.11  # Required by scvi-tools 1.4+
+tangram-sc>=1.0.4  # Spatial mapping of scRNA-seq to spatial transcriptomics
+
+# Spatial Deconvolution (scvi-tools ecosystem)
+scvi-tools>=1.4.0  # DestVI, Stereoscope, gimVI for spatial deconvolution
+cell2location>=0.1.5  # Bayesian cell type mapping for spatial data
+
+# External APIs & Databases
+gget>=0.28.0  # Unified API for genomic databases (ARCHS4, Enrichr)
+pymed>=0.8.9  # PubMed literature queries
+biopython>=1.84  # Sequence analysis (restriction enzymes, ORF finding, etc.)
+
+# Visualization
+matplotlib>=3.9,<4.0
+seaborn>=0.13,<0.14
+
+# Jupyter (versions that enable real-time output streaming in notebooks)
+ipython>=9.4.0
+ipykernel>=6.30.0
+jupyter>=1.0
+jupyterlab>=4.4.0
+notebook>=7.0
+
+# Utilities
+pydantic>=2.8,<3.0
+
+# Embeddings for tool retrieval
+sentence-transformers>=3.0,<4.0
+
+# Spatial analysis specific
+harmonypy>=0.0.9
+cellxgene-census>=1.0
+gget>=0.28.0  # Unified API for genomic databases (ARCHS4, Enrichr)
+pymed>=0.8.9  # PubMed literature queries
+bbknn>=1.6.0  # Batch-balanced KNN for data integration
+
+# Cell-cell communication
+cellphonedb>=5.0.0  # Ligand-receptor interaction analysis
+liana>=1.6.0  # Multi-method LR inference, spatial CCC, tensor decomposition
+
+# Spatial domain detection
+SpaGCN>=1.2.7  # Graph convolutional network for spatial clustering with histology integration
+GraphST>=1.1.1  # Graph self-supervised contrastive learning for spatial domains
+POT>=0.9.0  # Python Optimal Transport (required by GraphST)
+leidenalg<0.11  # Leiden clustering algorithm (compatible with igraph 0.11.x)
+
+# Trajectory inference
+scvelo>=0.3.0  # RNA velocity analysis
+cellrank>=2.0.0  # Fate mapping and trajectory inference
+
+# Multimodal integration
+mofapy2>=0.7.0  # Multi-Omics Factor Analysis (MOFA+)

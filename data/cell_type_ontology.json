@@ -1,0 +1,274 @@
+{
+  "_metadata": {
+    "version": "1.0",
+    "description": "Hierarchical cell type ontology for spatial transcriptomics annotation",
+    "usage": "Level 1 (broad) -> Level 2 (specific) annotation workflow"
+  },
+  
+  "categories": {
+    "Cardiomyocyte": {
+      "description": "Heart muscle cells",
+      "tissues": ["heart"],
+      "markers": ["TNNT2", "MYH6", "MYH7", "ACTC1", "TTN"],
+      "subtypes": {
+        "Ventricular cardiomyocyte": {"markers": ["MYH7", "MYL2"], "description": "Ventricle muscle"},
+        "Atrial cardiomyocyte": {"markers": ["MYH6", "MYL7", "NPPA"], "description": "Atrium muscle"},
+        "Nodal cardiomyocyte": {"markers": ["HCN4", "TBX3"], "description": "Pacemaker cells"},
+        "Purkinje fiber cell": {"markers": ["IRX3", "GJA5"], "description": "Conduction system"}
+      }
+    },
+    
+    "Fibroblast": {
+      "description": "Connective tissue cells producing ECM",
+      "tissues": ["heart", "lung", "skin", "liver", "kidney", "intestine"],
+      "markers": ["COL1A1", "DCN", "LUM", "PDGFRA", "VIM"],
+      "subtypes": {
+        "Fibroblast": {"markers": ["COL1A1", "DCN"], "description": "General fibroblast"},
+        "Myofibroblast": {"markers": ["ACTA2", "POSTN", "FAP"], "description": "Activated fibroblast"},
+        "Cardiac fibroblast": {"markers": ["TCF21", "PDGFRA"], "description": "Heart-specific"},
+        "Adventitial fibroblast": {"markers": ["PDGFRA", "PI16"], "description": "Vessel adventitia"}
+      }
+    },
+    
+    "Endothelial cell": {
+      "description": "Blood and lymphatic vessel lining cells",
+      "tissues": ["heart", "lung", "liver", "kidney", "brain", "intestine"],
+      "markers": ["PECAM1", "CDH5", "VWF", "ERG"],
+      "subtypes": {
+        "Arterial endothelial cell": {"markers": ["GJA5", "DKK2", "EFNB2"], "description": "Artery lining"},
+        "Venous endothelial cell": {"markers": ["NR2F2", "ACKR1"], "description": "Vein lining"},
+        "Capillary endothelial cell": {"markers": ["CA4", "RGCC"], "description": "Capillary"},
+        "Lymphatic endothelial cell": {"markers": ["PROX1", "LYVE1", "PDPN"], "description": "Lymphatics"},
+        "Endocardial cell": {"markers": ["NPR3", "SMOC1"], "description": "Heart inner lining"}
+      }
+    },
+    
+    "Smooth muscle cell": {
+      "description": "Smooth muscle in vessels and organs",
+      "tissues": ["heart", "lung", "intestine", "uterus"],
+      "markers": ["ACTA2", "MYH11", "TAGLN", "CNN1"],
+      "subtypes": {
+        "Vascular smooth muscle cell": {"markers": ["MYH11", "ACTA2"], "description": "Vessel wall"},
+        "Visceral smooth muscle cell": {"markers": ["DES", "ACTG2"], "description": "Organ smooth muscle"},
+        "Pericyte": {"markers": ["RGS5", "PDGFRB", "KCNJ8"], "description": "Vessel-associated"}
+      }
+    },
+    
+    "T cell": {
+      "description": "Adaptive immune lymphocytes",
+      "tissues": ["all"],
+      "markers": ["CD3D", "CD3E", "CD3G", "TRAC"],
+      "subtypes": {
+        "CD4+ T cell": {"markers": ["CD4", "IL7R"], "description": "Helper T cell"},
+        "CD8+ T cell": {"markers": ["CD8A", "CD8B"], "description": "Cytotoxic T cell"},
+        "Regulatory T cell": {"markers": ["FOXP3", "IL2RA"], "description": "Treg"},
+        "gamma-delta T cell": {"markers": ["TRDC", "TRGC1"], "description": "Innate-like T cell"},
+        "NK T cell": {"markers": ["KLRB1", "CD3D"], "description": "Natural killer T cell"}
+      }
+    },
+    
+    "B cell": {
+      "description": "Antibody-producing lymphocytes",
+      "tissues": ["all"],
+      "markers": ["CD19", "MS4A1", "CD79A", "CD79B"],
+      "subtypes": {
+        "Naive B cell": {"markers": ["IGHD", "FCER2"], "description": "Unstimulated B cell"},
+        "Memory B cell": {"markers": ["CD27", "IGHG1"], "description": "Antigen-experienced"},
+        "Plasma cell": {"markers": ["SDC1", "MZB1", "JCHAIN"], "description": "Antibody-secreting"},
+        "Germinal center B cell": {"markers": ["BCL6", "AICDA"], "description": "GC B cell"}
+      }
+    },
+    
+    "NK cell": {
+      "description": "Natural killer cells",
+      "tissues": ["all"],
+      "markers": ["NCAM1", "NKG7", "GNLY", "KLRD1"],
+      "subtypes": {
+        "CD56bright NK cell": {"markers": ["NCAM1", "SELL"], "description": "Cytokine-producing"},
+        "CD56dim NK cell": {"markers": ["FCGR3A", "PRF1"], "description": "Cytotoxic NK"}
+      }
+    },
+    
+    "Macrophage": {
+      "description": "Tissue-resident phagocytes",
+      "tissues": ["all"],
+      "markers": ["CD68", "CD163", "MRC1", "MARCO"],
+      "subtypes": {
+        "Tissue-resident macrophage": {"markers": ["C1QA", "C1QB", "LYVE1"], "description": "Homeostatic"},
+        "Inflammatory macrophage": {"markers": ["IL1B", "TNF", "CCL2"], "description": "M1-like"},
+        "Anti-inflammatory macrophage": {"markers": ["CD163", "MRC1", "TGFB1"], "description": "M2-like"},
+        "Cardiac macrophage": {"markers": ["TIMD4", "LYVE1"], "description": "Heart-resident"}
+      }
+    },
+    
+    "Monocyte": {
+      "description": "Circulating myeloid cells",
+      "tissues": ["all"],
+      "markers": ["CD14", "FCGR3A", "S100A8", "S100A9"],
+      "subtypes": {
+        "Classical monocyte": {"markers": ["CD14", "S100A8"], "description": "CD14+ monocyte"},
+        "Non-classical monocyte": {"markers": ["FCGR3A", "CX3CR1"], "description": "CD16+ monocyte"},
+        "Intermediate monocyte": {"markers": ["CD14", "FCGR3A"], "description": "Transitional"}
+      }
+    },
+    
+    "Dendritic cell": {
+      "description": "Antigen-presenting cells",
+      "tissues": ["all"],
+      "markers": ["ITGAX", "HLA-DRA", "FLT3"],
+      "subtypes": {
+        "cDC1": {"markers": ["CLEC9A", "XCR1", "BATF3"], "description": "Cross-presenting DC"},
+        "cDC2": {"markers": ["CD1C", "CLEC10A", "FCER1A"], "description": "CD1c+ DC"},
+        "pDC": {"markers": ["IL3RA", "CLEC4C", "TCF4"], "description": "Plasmacytoid DC"},
+        "Mature DC": {"markers": ["CCR7", "LAMP3"], "description": "Activated DC"}
+      }
+    },
+    
+    "Mast cell": {
+      "description": "Tissue-resident granulocytes",
+      "tissues": ["all"],
+      "markers": ["KIT", "TPSAB1", "CPA3", "MS4A2"],
+      "subtypes": {
+        "Mast cell": {"markers": ["TPSAB1", "CPA3"], "description": "General mast cell"}
+      }
+    },
+    
+    "Neutrophil": {
+      "description": "Circulating granulocytes",
+      "tissues": ["all"],
+      "markers": ["S100A8", "S100A9", "FCGR3B", "CSF3R"],
+      "subtypes": {
+        "Neutrophil": {"markers": ["S100A8", "FCGR3B"], "description": "General neutrophil"}
+      }
+    },
+    
+    "Neuron": {
+      "description": "Nerve cells",
+      "tissues": ["brain", "heart", "intestine"],
+      "markers": ["SNAP25", "SYP", "RBFOX3", "MAP2"],
+      "subtypes": {
+        "Excitatory neuron": {"markers": ["SLC17A7", "CAMK2A"], "description": "Glutamatergic"},
+        "Inhibitory neuron": {"markers": ["GAD1", "GAD2"], "description": "GABAergic"},
+        "Peripheral neuron": {"markers": ["PRPH", "PGP9.5"], "description": "PNS neuron"},
+        "Sympathetic neuron": {"markers": ["TH", "DBH"], "description": "Autonomic"}
+      }
+    },
+    
+    "Glial cell": {
+      "description": "Neural support cells",
+      "tissues": ["brain", "heart"],
+      "markers": ["S100B", "GFAP"],
+      "subtypes": {
+        "Astrocyte": {"markers": ["GFAP", "AQP4", "SLC1A2"], "description": "Star-shaped glia"},
+        "Oligodendrocyte": {"markers": ["MBP", "MOG", "OLIG2"], "description": "Myelin-forming"},
+        "Microglia": {"markers": ["CX3CR1", "P2RY12", "TMEM119"], "description": "Brain macrophage"},
+        "Schwann cell": {"markers": ["MPZ", "PMP22"], "description": "PNS glia"}
+      }
+    },
+    
+    "Epithelial cell": {
+      "description": "Surface and glandular lining cells",
+      "tissues": ["lung", "intestine", "kidney", "skin", "liver"],
+      "markers": ["EPCAM", "KRT8", "KRT18", "CDH1"],
+      "subtypes": {
+        "Alveolar type 1 cell": {"markers": ["AGER", "PDPN"], "description": "Gas exchange"},
+        "Alveolar type 2 cell": {"markers": ["SFTPC", "SFTPB"], "description": "Surfactant-producing"},
+        "Enterocyte": {"markers": ["FABP2", "APOA1"], "description": "Intestinal absorptive"},
+        "Goblet cell": {"markers": ["MUC2", "TFF3"], "description": "Mucus-secreting"},
+        "Hepatocyte": {"markers": ["ALB", "APOB", "CYP3A4"], "description": "Liver parenchyma"},
+        "Cholangiocyte": {"markers": ["KRT19", "SOX9"], "description": "Bile duct"},
+        "Podocyte": {"markers": ["NPHS1", "NPHS2", "WT1"], "description": "Kidney filtration"},
+        "Tubular epithelial cell": {"markers": ["SLC12A1", "UMOD"], "description": "Kidney tubule"}
+      }
+    },
+    
+    "Adipocyte": {
+      "description": "Fat cells",
+      "tissues": ["heart", "skin", "adipose"],
+      "markers": ["ADIPOQ", "LEP", "PPARG", "FABP4"],
+      "subtypes": {
+        "White adipocyte": {"markers": ["LEP", "ADIPOQ"], "description": "Energy storage"},
+        "Brown adipocyte": {"markers": ["UCP1", "CIDEA"], "description": "Thermogenic"}
+      }
+    },
+    
+    "Mesothelial cell": {
+      "description": "Serosal lining cells",
+      "tissues": ["heart", "lung", "intestine"],
+      "markers": ["MSLN", "WT1", "UPK3B"],
+      "subtypes": {
+        "Mesothelial cell": {"markers": ["MSLN", "WT1"], "description": "General mesothelium"},
+        "Epicardial cell": {"markers": ["WT1", "TBX18"], "description": "Heart surface"}
+      }
+    },
+    
+    "Erythrocyte": {
+      "description": "Red blood cells",
+      "tissues": ["all"],
+      "markers": ["HBA1", "HBA2", "HBB"],
+      "subtypes": {
+        "Erythrocyte": {"markers": ["HBA1", "HBB"], "description": "Mature RBC"},
+        "Erythroid progenitor": {"markers": ["GYPA", "TFRC"], "description": "Developing RBC"}
+      }
+    },
+    
+    "Platelet": {
+      "description": "Thrombocytes",
+      "tissues": ["all"],
+      "markers": ["PPBP", "PF4", "GP1BA"],
+      "subtypes": {
+        "Platelet": {"markers": ["PPBP", "PF4"], "description": "Clotting cell"},
+        "Megakaryocyte": {"markers": ["GP1BA", "ITGA2B"], "description": "Platelet precursor"}
+      }
+    }
+  },
+  
+  "tissue_profiles": {
+    "heart": {
+      "description": "Cardiac tissue",
+      "expected_types": [
+        "Cardiomyocyte", "Fibroblast", "Endothelial cell", "Smooth muscle cell",
+        "Macrophage", "T cell", "Mesothelial cell", "Adipocyte", "Neuron"
+      ],
+      "rare_types": ["B cell", "NK cell", "Dendritic cell", "Mast cell"]
+    },
+    "brain": {
+      "description": "Neural tissue",
+      "expected_types": [
+        "Neuron", "Glial cell", "Endothelial cell", "Smooth muscle cell"
+      ],
+      "rare_types": ["Macrophage", "T cell"]
+    },
+    "lung": {
+      "description": "Pulmonary tissue",
+      "expected_types": [
+        "Epithelial cell", "Endothelial cell", "Fibroblast", "Smooth muscle cell",
+        "Macrophage", "T cell", "B cell", "Dendritic cell", "Mast cell"
+      ],
+      "rare_types": ["Neuron"]
+    },
+    "liver": {
+      "description": "Hepatic tissue",
+      "expected_types": [
+        "Epithelial cell", "Endothelial cell", "Macrophage", "T cell", "NK cell"
+      ],
+      "rare_types": ["Fibroblast", "B cell"]
+    },
+    "intestine": {
+      "description": "Gastrointestinal tissue",
+      "expected_types": [
+        "Epithelial cell", "Fibroblast", "Smooth muscle cell", "Endothelial cell",
+        "T cell", "B cell", "Macrophage", "Dendritic cell", "Mast cell", "Neuron"
+      ],
+      "rare_types": []
+    },
+    "kidney": {
+      "description": "Renal tissue",
+      "expected_types": [
+        "Epithelial cell", "Endothelial cell", "Fibroblast", "Smooth muscle cell",
+        "Macrophage", "T cell", "Dendritic cell"
+      ],
+      "rare_types": ["B cell", "NK cell"]
+    }
+  }
+}
