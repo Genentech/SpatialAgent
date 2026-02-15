@@ -2,6 +2,18 @@
 
 Annotate cell types and tissue niches in spatial transcriptomics data.
 
+## Platform Applicability
+
+**This workflow is for single-cell resolution platforms** (MERFISH, Xenium, CosMx, SeqFISH) where each observation corresponds to one cell.
+
+**NOT for spot-based platforms** (Visium, Slide-seq, ST) where each spot contains multiple cells. For spot-based data, use the `spatial_deconvolution` skill instead, which estimates cell type proportions per spot via deconvolution (DestVI, Cell2location, Stereoscope).
+
+**How to detect platform type**:
+- **Single-cell resolution**: ~100–500 genes per panel, sub-cellular coordinates, technology names include MERFISH, Xenium, CosMx, SeqFISH
+- **Spot-based**: ~18,000–33,000 genes (whole transcriptome), ~55µm spot diameter (Visium) or bead-based capture, technology names include Visium, Slide-seq, ST, 10x Spatial Gene Expression
+
+---
+
 ## Workflow Overview
 
 1. **Explore dataset structure** (always do this first)
