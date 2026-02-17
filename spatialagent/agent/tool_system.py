@@ -276,9 +276,9 @@ ALWAYS_LOADED_TOOLS = [
     "execute_bash",
     # Code inspection - for viewing tool source code
     "inspect_tool_code",
-    # Research tools - literature and web search
+    # Research tools - literature search
     "query_pubmed",
-    "web_search",
+    # "web_search",  # Disabled: requires cloud API keys (Anthropic/OpenAI/Google)
 ]
 
 

@@ -1,0 +1,93 @@
+# LiteLLM proxy config for vLLM backend
+# Handles Ministral's continue_final_message requirement via merge_consecutive_messages
+#
+# Recommended Default Inference Parameters:
+#   Qwen3-VL-32B:    temperature=1.0, top_p=1.0, top_k=-1 (vllm_default)
+#   Ministral-3-14B: temperature=0.15, top_p=1.0, top_k=-1 (production, per Mistral docs)
+#
+# Benchmark Latency (linear s/q, 8x parallel estimate):
+#   HLE Biology:   Qwen ~38s, Ministral ~18s (2.1x faster)
+#   GPQA Diamond:  Qwen ~70s, Ministral ~32s (2.2x faster)
+#
+# Usage (2x A100-80GB - full precision):
+#   1. Start vLLM embedding: .venv-vllm/bin/python -m vllm.entrypoints.openai.api_server \
+#        --model Qwen/Qwen3-Embedding-0.6B --port 8001 --tensor-parallel-size 1 \
+#        --gpu-memory-utilization 0.02 --max-model-len 512 --enforce-eager
+#   2. Start vLLM chat (choose one):
+#      - Qwen3-VL-32B FP16: vllm serve Qwen/Qwen3-VL-32B-Instruct --port 8000 -tp 2 --max-model-len 131072
+#      - Ministral-3 FP16: vllm serve mistralai/Ministral-3-14B-Instruct-2512 --port 8000 -tp 1 --max-model-len 131072 --tokenizer_mode mistral --config_format mistral --load_format mistral
+#   3. Start LiteLLM: .venv-litellm/bin/litellm --config vllm_litellm_config.yaml --port 8080
+#   4. Point agent to LiteLLM: export CUSTOM_MODEL_BASE_URL=http://localhost:8080/v1
+
+model_list:
+  # Qwen3-VL-32B FP16 (full precision) - recommended for 2x A100-80GB
+  - model_name: Qwen/Qwen3-VL-32B-Instruct
+    litellm_params:
+      model: hosted_vllm/Qwen/Qwen3-VL-32B-Instruct
+      api_base: http://localhost:8000/v1
+      api_key: EMPTY
+
+  - model_name: qwen3-vl-32b
+    litellm_params:
+      model: hosted_vllm/Qwen/Qwen3-VL-32B-Instruct
+      api_base: http://localhost:8000/v1
+      api_key: EMPTY
+
+  - model_name: qwen3-vl
+    litellm_params:
+      model: hosted_vllm/Qwen/Qwen3-VL-32B-Instruct
+      api_base: http://localhost:8000/v1
+      api_key: EMPTY
+
+  # Ministral-3 FP16 (full precision)
+  - model_name: mistralai/Ministral-3-14B-Instruct-2512
+    litellm_params:
+      model: hosted_vllm/mistralai/Ministral-3-14B-Instruct-2512
+      api_base: http://localhost:8000/v1
+      api_key: EMPTY
+      merge_consecutive_messages: true
+
+  - model_name: ministral-3
+    litellm_params:
+      model: hosted_vllm/mistralai/Ministral-3-14B-Instruct-2512
+      api_base: http://localhost:8000/v1
+      api_key: EMPTY
+      merge_consecutive_messages: true
+
+  # AWQ variants (for smaller GPU setups)
+  - model_name: cyankiwi/Ministral-3-14B-Instruct-2512-AWQ-4bit
+    litellm_params:
+      model: hosted_vllm/cyankiwi/Ministral-3-14B-Instruct-2512-AWQ-4bit
+      api_base: http://localhost:8000/v1
+      api_key: EMPTY
+      merge_consecutive_messages: true
+
+  - model_name: QuantTrio/Qwen3-VL-32B-Instruct-AWQ
+    litellm_params:
+      model: hosted_vllm/QuantTrio/Qwen3-VL-32B-Instruct-AWQ
+      api_base: http://localhost:8000/v1
+      api_key: EMPTY
+
+  # Embedding model via vLLM (port 8001)
+  - model_name: qwen3-embedding:0.6b
+    litellm_params:
+      model: hosted_vllm/Qwen/Qwen3-Embedding-0.6B
+      api_base: http://localhost:8001/v1
+      api_key: EMPTY
+
+  - model_name: qwen3-embedding
+    litellm_params:
+      model: hosted_vllm/Qwen/Qwen3-Embedding-0.6B
+      api_base: http://localhost:8001/v1
+      api_key: EMPTY
+
+litellm_settings:
+  drop_params: true
+  modify_params: true
+  num_retries: 3
+  request_timeout: 600
+  callbacks: custom_callbacks.proxy_handler_instance
+
+general_settings:
+  disable_spend_logs: true
+  health_check_mode: off

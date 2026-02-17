@@ -1,47 +1,66 @@
-## SpatialAgent
+## SpatialAgent — Local LLM Branch
 
-This is the official implementation for **SpatialAgent: An autonomous AI agent for spatial biology**.
+This branch runs SpatialAgent entirely with **locally-served LLMs** — no API keys required. The `web_search` tool is commented out since it depends on cloud APIs (Anthropic/OpenAI/Google).
 
-Contact wang.hanchen@gene.com or hanchenw@stanford.edu if you have any questions.
+For the main branch with full cloud API support, see the `main` branch.
 
-![teaser](teaser.png)
+### Prerequisites
 
-### Overview
+- Python 3.11, Conda
+- **NVIDIA GPUs** (vLLM backend) or **Apple Silicon Mac** (MLX backend)
 
-SpatialAgent is an autonomous AI agent for spatial transcriptomics, single-cell RNA-seq, and molecular biology. It integrates large language models with dynamic tool execution and adaptive reasoning, spanning the entire research workflow from experimental design to multimodal data analysis and hypothesis generation.
-
-Key features:
-- **Plan-Act-Conclude architecture** with direct code execution
-- **72 specialized tools** for database queries, literature mining, spatial analytics, and genomic analysis
-- **17 skill templates** for guided workflows (annotation, CCI, panel design, spatial mapping, etc.)
-- **Multi-model support**: Claude, GPT, and Gemini model families
-
-### Installation
+### Step 1: Set Up the Agent Environment
 
 ```bash
-# Setup environment
-./setup_env.sh              # Creates 'spatial_agent' environment, python 3.11
+./setup_env.sh              # Creates 'spatial_agent' conda environment
 conda activate spatial_agent
-
-# Set API keys
-export ANTHROPIC_API_KEY=your_key    # For Claude models
-export OPENAI_API_KEY=your_key       # For GPT models
-export GOOGLE_API_KEY=your_key       # For Gemini models (optional)
 ```
 
-### Quick Start
+### Step 2: Set Up Local LLM Servers
 
-See `main.ipynb` for a quick overview.
+**For Linux + NVIDIA GPUs (vLLM):**
+
+```bash
+./local_llm/vllm/setup.sh                # One-time setup (creates .venv-vllm, .venv-litellm)
+
+./local_llm/vllm/start.sh                # Start with Qwen3-VL-32B (default)
+./local_llm/vllm/start.sh ministral      # Or start with Ministral-3-14B
+./local_llm/vllm/start.sh status         # Check server status
+./local_llm/vllm/start.sh stop           # Stop all servers
+```
+
+**For macOS + Apple Silicon (MLX):**
+
+```bash
+./local_llm/mlx/setup.sh                 # One-time setup (creates .venv-mlx)
+
+./local_llm/mlx/start.sh                 # Start servers
+./local_llm/mlx/start.sh status          # Check server status
+./local_llm/mlx/start.sh stop            # Stop all servers
+```
+
+### Step 3: Run SpatialAgent
+
+After starting the servers, set the environment variables and run. See `main.ipynb` for a full walkthrough.
+
+```bash
+# Point SpatialAgent to local servers
+export CUSTOM_MODEL_BASE_URL=http://localhost:8088/v1   # LiteLLM proxy (vLLM)
+export CUSTOM_EMBED_BASE_URL=http://localhost:8088/v1
+export CUSTOM_EMBED_MODEL=qwen3-embedding
+export TOKENIZERS_PARALLELISM=false
+```
 
 ```python
 from spatialagent.agent import SpatialAgent, make_llm
 
-llm = make_llm("claude-sonnet-4-5-20250929")
-agent = SpatialAgent(llm=llm, save_path="./experiments/demo/")
+llm = make_llm("qwen3-vl-32b")
+agent = SpatialAgent(llm=llm, save_path="./experiments/local/")
 
 result = agent.run(
-    "Find mouse brain cortex datasets from CZI and analyze neuronal cell types",
-    config={"thread_id": "analysis_1"}
+    "Load the MERFISH mouse liver dataset at './data/example_merfish.h5ad', "
+    "run spatial clustering, and annotate cell types using PanglaoDB markers.",
+    config={"thread_id": "local_demo"}
 )
 ```
 
@@ -49,18 +68,32 @@ result = agent.run(
 
 ```
 SpatialAgent/
+├── local_llm/
+│   ├── vllm/              # vLLM server scripts (Linux + NVIDIA)
+│   ├── mlx/               # MLX server scripts (macOS + Apple Silicon)
+│   └── shared/            # Shared configs (custom callbacks)
 ├── spatialagent/
-│   ├── agent/              # Agent implementation
-│   ├── skill/              # Skill templates (17 guided workflows)
-│   ├── tool/               # Tool implementations (72 tools)
-│   └── hooks.py            # Event hooks
-├── data/                   # Reference databases (CellMarker, PanglaoDB, CZI catalog)
-├── resource/               # Dependencies and external packages
-├── notebooks/              # Example notebooks
-├── docs/                   # Documentation
-├── main.ipynb              # Quick start notebook
-└── setup_env.sh            # Environment setup
+│   ├── agent/             # Agent implementation
+│   ├── skill/             # Skill templates (17 guided workflows)
+│   ├── tool/              # Tool implementations (72 tools)
+│   └── hooks.py           # Event hooks
+├── benchmarks/            # Local model benchmark scripts
+├── evaluation/            # Evaluation modules
+├── data/                  # Reference databases (CellMarker, PanglaoDB, CZI catalog)
+├── docs/                  # Documentation
+├── main.ipynb             # Quick start notebook
+└── setup_env.sh           # Environment setup
 ```
+
+### Supported Local Models
+
+| Model | Backend | Description |
+|-------|---------|-------------|
+| Qwen3-VL-32B | vLLM | Vision-language model (default) |
+| Ministral-3-14B | vLLM | Mistral's lightweight model |
+| MLX models | MLX | Apple Silicon optimized |
+
+See [`docs/local_llm_setup.md`](docs/local_llm_setup.md) for full configuration details.
 
 ### Citation
 

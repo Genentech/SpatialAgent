@@ -7,6 +7,9 @@
 #
 # Or use the setup script:
 #   ./setup_env.sh [env_name]
+#
+# Or use the setup script:
+#   ./setup_env.sh [env_name]
 # ==========================
 
 # Core LLM & Agent Framework

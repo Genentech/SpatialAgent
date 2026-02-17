@@ -1,0 +1,74 @@
+model_list:
+  # Vision-capable models via mlx_vlm (using hosted_vllm to avoid /v1 prefix)
+  - model_name: qwen3-vl-32b
+    litellm_params:
+      model: hosted_vllm/mlx-community/Qwen3-VL-32B-Instruct-8bit
+      api_base: http://localhost:8081
+      api_key: fake-key
+    model_info:
+      health_check_model: skip
+
+  - model_name: qwen3-vl-30b-a3b
+    litellm_params:
+      model: hosted_vllm/mlx-community/Qwen3-VL-30B-A3B-Instruct-8bit
+      api_base: http://localhost:8081
+      api_key: fake-key
+    model_info:
+      health_check_model: skip
+
+  # Text-only models via mlx_lm (port 8083)
+  - model_name: qwen3-next-80b-a3b
+    litellm_params:
+      model: hosted_vllm/mlx-community/Qwen3-Next-80B-A3B-Instruct-8bit
+      api_base: http://localhost:8083
+      api_key: fake-key
+    model_info:
+      health_check_model: skip
+
+  # Ministral via mlx_lm (port 8083) - mlx_vlm has tokenizer bug
+  - model_name: ministral-14b
+    litellm_params:
+      model: hosted_vllm/mlx-community/Ministral-3-14B-Instruct-2512-8bit
+      api_base: http://localhost:8083
+      api_key: fake-key
+    model_info:
+      health_check_model: skip
+
+  # Embeddings (via local_embed_server on port 8082)
+  - model_name: nomic
+    litellm_params:
+      model: openai/nomic
+      api_base: http://localhost:8082/v1
+      api_key: fake-key
+    model_info:
+      mode: embedding
+
+  - model_name: nomic-v2
+    litellm_params:
+      model: openai/nomic-v2
+      api_base: http://localhost:8082/v1
+      api_key: fake-key
+    model_info:
+      mode: embedding
+
+  - model_name: qwen
+    litellm_params:
+      model: openai/qwen
+      api_base: http://localhost:8082/v1
+      api_key: fake-key
+    model_info:
+      mode: embedding
+
+  - model_name: qwen-small
+    litellm_params:
+      model: openai/qwen-small
+      api_base: http://localhost:8082/v1
+      api_key: fake-key
+    model_info:
+      mode: embedding
+
+litellm_settings:
+  drop_params: true
+  modify_params: true
+  num_retries: 3
+  request_timeout: 300

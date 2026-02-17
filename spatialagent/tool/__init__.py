@@ -26,7 +26,7 @@ from .literature import (
     query_pubmed,
     query_arxiv,
     search_semantic_scholar,
-    web_search,  # Unified web search using Anthropic/OpenAI/Google server-side tools
+    # web_search,  # Disabled: requires cloud API keys (Anthropic/OpenAI/Google)
     # query_scholar,  # Disabled - hangs due to Google Scholar rate limits
     # search_duckduckgo,  # Disabled - blocked on many networks, overlaps with academic search
     extract_url_content,
@@ -129,7 +129,7 @@ __all__ = [
     "query_pubmed",
     "query_arxiv",
     "search_semantic_scholar",
-    "web_search",
+    # "web_search",  # Disabled: requires cloud API keys
     # "query_scholar",  # Disabled
     # "search_duckduckgo",  # Disabled
     "extract_url_content",

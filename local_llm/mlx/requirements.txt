@@ -1,0 +1,20 @@
+# Local LLM Server dependencies
+fastapi>=0.100.0
+uvicorn>=0.20.0
+pydantic>=2.0.0
+
+# MLX for Apple Silicon
+mlx-lm>=0.29.0
+mlx-vlm>=0.1.0
+
+# Transformers v5 RC required for Ministral tokenizer (dev versions have bugs)
+transformers==5.0.0rc1
+huggingface-hub>=1.0.0
+tokenizers>=0.20.0
+
+# Embeddings
+sentence-transformers>=3.0.0
+einops  # required by nomic
+
+# LiteLLM proxy
+litellm[proxy]>=1.50.0

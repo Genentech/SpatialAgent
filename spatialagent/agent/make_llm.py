@@ -3,8 +3,75 @@ Simplified LLM Factory for Azure OpenAI, OpenAI, Anthropic Claude, Google Gemini
 """
 
 import os
+from typing import Any, List, Optional
 from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+
+
+# =============================================================================
+# Alternative Approach: LangChain Wrapper for Mistral continue_final_message
+# =============================================================================
+# Mistral models on vLLM require special handling for multi-turn conversations:
+# - When last message is from assistant: continue_final_message=True
+# - When last message is from user: add_generation_prompt=True (default)
+#
+# We use a LiteLLM callback (local_llm/vllm/custom_callbacks.py) to handle this
+# at the proxy layer. The callback automatically detects the last message role
+# and sets the appropriate flags before forwarding to vLLM.
+#
+# An alternative approach is to use a LangChain wrapper (MistralChatOpenAI)
+# that intercepts invoke() calls and adds extra_body parameters dynamically.
+# This is commented out below but can be enabled if not using LiteLLM.
+#
+# from langchain_core.messages import BaseMessage
+#
+# MISTRAL_MODELS = ("mistral", "ministral", "codestral", "pixtral")
+#
+# def _is_mistral_model(model: str) -> bool:
+#     """Check if the model is a Mistral family model."""
+#     return any(name in model.lower() for name in MISTRAL_MODELS)
+#
+# class MistralChatOpenAI:
+#     """Wrapper for ChatOpenAI that handles Mistral's continue_final_message."""
+#
+#     def __init__(self, **kwargs):
+#         from langchain_openai import ChatOpenAI
+#         self._llm = ChatOpenAI(**kwargs)
+#
+#     def _get_extra_body(self, messages: List[BaseMessage]) -> dict:
+#         if not messages:
+#             return {}
+#         last_role = getattr(messages[-1], "type", None)
+#         if last_role in ("ai", "assistant"):
+#             return {"continue_final_message": True, "add_generation_prompt": False}
+#         return {}
+#
+#     def invoke(self, messages: Any, **kwargs) -> Any:
+#         if isinstance(messages, list):
+#             extra_body = self._get_extra_body(messages)
+#             if extra_body:
+#                 existing = kwargs.get("extra_body", {})
+#                 kwargs["extra_body"] = {**existing, **extra_body}
+#         return self._llm.invoke(messages, **kwargs)
+#
+#     async def ainvoke(self, messages: Any, **kwargs) -> Any:
+#         if isinstance(messages, list):
+#             extra_body = self._get_extra_body(messages)
+#             if extra_body:
+#                 existing = kwargs.get("extra_body", {})
+#                 kwargs["extra_body"] = {**existing, **extra_body}
+#         return await self._llm.ainvoke(messages, **kwargs)
+#
+#     def __getattr__(self, name: str) -> Any:
+#         return getattr(self._llm, name)
+#
+# To use the wrapper approach, in make_llm() replace:
+#     return ChatOpenAI(**llm_kwargs)
+# with:
+#     if _is_mistral_model(model):
+#         return MistralChatOpenAI(**llm_kwargs)
+#     return ChatOpenAI(**llm_kwargs)
+# =============================================================================
 
 # Default recommended models (2025)
 DEFAULT_OPENAI_MODEL = "gpt-5"
@@ -210,20 +277,25 @@ def make_llm(
     if track_cost:
         callbacks.append(CostCallback(model))
 
-    # # Custom OpenAI-compatible endpoint (LiteLLM, vLLM, Ollama, etc.) - currently not used
-    # custom_base_url = os.environ.get("CUSTOM_MODEL_BASE_URL", "")
-    # custom_api_key = os.environ.get("CUSTOM_MODEL_API_KEY", "EMPTY")
-    # if custom_base_url:
-    #     from langchain_openai import ChatOpenAI
-    #     return ChatOpenAI(
-    #         model=model,
-    #         base_url=custom_base_url,
-    #         api_key=custom_api_key if custom_api_key else "EMPTY",
-    #         callbacks=callbacks,
-    #         temperature=temperature,
-    #         streaming=streaming,
-    #         **kwargs
-    #     )
+    # Check for custom OpenAI-compatible endpoint via environment variables
+    custom_base_url = os.environ.get("CUSTOM_MODEL_BASE_URL", "")
+    custom_api_key = os.environ.get("CUSTOM_MODEL_API_KEY", "EMPTY")
+
+    # Custom OpenAI-compatible endpoint (LiteLLM, vLLM, Ollama, etc.)
+    # Note: For Mistral models, the LiteLLM callback (local_llm/vllm/custom_callbacks.py)
+    # handles continue_final_message automatically at the proxy layer.
+    if custom_base_url:
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=model,
+            base_url=custom_base_url,
+            api_key=custom_api_key if custom_api_key else "EMPTY",
+            callbacks=callbacks,
+            temperature=temperature,
+            streaming=streaming,
+            **kwargs
+        )
 
     # Google Gemini (using OpenAI-compatible endpoint for consistent response format)
     if "gemini" in model:
@@ -446,7 +518,7 @@ class LocalEmbeddings:
         Initialize local embedding model.
 
         Args:
-            model_name: Short name (e.g., "qwen3-0.6b") or full HuggingFace model path
+            model_name: Short name (e.g., "bge-large") or full HuggingFace model path
         """
         # Resolve short name to full path
         if model_name in LOCAL_EMBEDDING_MODELS:
@@ -488,14 +560,14 @@ def make_llm_emb_local(model: str = DEFAULT_LOCAL_EMBEDDING_MODEL):
 
     Args:
         model: Model name - either short name or full HuggingFace path
-               Short names: "qwen3-0.6b", "pubmedbert", "biomedbert"
-               Default: "qwen3-0.6b" (Qwen/Qwen3-Embedding-0.6B)
+               Short names: "bge-large", "bge-base", "bge-small", "e5-large", "minilm", "mpnet"
+               Default: "bge-large" (BAAI/bge-large-en-v1.5)
 
     Returns:
         LocalEmbeddings instance (LangChain compatible, cached globally)
 
     Example:
-        emb = make_llm_emb_local("qwen3-0.6b")
+        emb = make_llm_emb_local("bge-large")
         vectors = emb.embed_documents(["text1", "text2"])
     """
     # Return cached model if already loaded
@@ -519,7 +591,7 @@ def make_llm_emb(
     Create embedding model - supports Azure OpenAI, custom endpoints, or local models.
 
     Configuration priority (checked in order):
-        1. Local sentence-transformers (default, or USE_LOCAL_EMBEDDINGS != "false")
+        1. use_local=True or USE_LOCAL_EMBEDDINGS env var → Local sentence-transformers
         2. CUSTOM_EMBED_BASE_URL → Custom OpenAI-compatible endpoint
         3. AZURE_API_KEY + AZURE_API_ENDPOINT → Azure OpenAI
         4. Hardcoded Azure endpoints (legacy fallback)
@@ -527,13 +599,15 @@ def make_llm_emb(
     Args:
         model: Azure/OpenAI embedding model name (default: text-embedding-3-small)
         region: Azure region - "eus2" (East US 2) or "sc" (Sweden Central)
-        use_local: Force local embeddings (default: None = uses local unless env var says otherwise)
-        local_model: Local model to use if use_local=True (default: qwen3-0.6b)
-        input_type: For Cohere models - "search_document" for docs, "search_query" for queries.
-                    If None, not passed (for OpenAI models that don't need it).
+        use_local: Force local embeddings (default: None = check env var)
+        local_model: Local model to use if use_local=True (default: bge-large)
+        input_type: Embedding input type - controls how queries vs documents are embedded.
+                    For Cohere: "search_document" or "search_query"
+                    For Qwen/vLLM: "query" or "document" (maps to prompt_name)
+                    If None, not passed (for models that don't need it).
 
     Environment Variables:
-        USE_LOCAL_EMBEDDINGS: Set to "false" to use API embeddings instead of local (default: true)
+        USE_LOCAL_EMBEDDINGS: Set to "true" to use local embeddings by default
         LOCAL_EMBEDDING_MODEL: Override local model name
         CUSTOM_EMBED_BASE_URL: Custom embedding endpoint URL
         CUSTOM_EMBED_API_KEY: API key for custom endpoint
@@ -562,13 +636,55 @@ def make_llm_emb(
     custom_embed_model = os.environ.get("CUSTOM_EMBED_MODEL", model)
 
     if custom_embed_url:
-        # Build extra kwargs for providers that need them (e.g., Cohere input_type)
+        # Build extra kwargs based on embedding model provider
         extra_body = {}
-        if input_type:
-            extra_body["input_type"] = input_type
+        model_lower = custom_embed_model.lower()
 
-        # Cohere Embed v4 has max 96 texts per request, configurable via env
-        chunk_size = int(os.environ.get("CUSTOM_EMBED_CHUNK_SIZE", "96"))
+        # Default chunk size, can be overridden by env var
+        env_chunk_size = os.environ.get("CUSTOM_EMBED_CHUNK_SIZE")
+
+        match model_lower:
+            # Qwen models: use prompt_name="query" for queries, nothing for documents
+            # Max batch size depends on vLLM server config, default 256
+            case m if "qwen" in m:
+                if input_type in ("query", "search_query"):
+                    extra_body = {"prompt_name": "query"}
+                else:
+                    extra_body = {}
+                chunk_size = int(env_chunk_size) if env_chunk_size else 256
+
+            # GTE models: use prompt_name="query" for queries, nothing for documents
+            # Max batch size depends on vLLM server config, default 256
+            case m if "gte" in m:
+                if input_type in ("query", "search_query"):
+                    extra_body = {"prompt_name": "query"}
+                else:
+                    extra_body = {}
+                chunk_size = int(env_chunk_size) if env_chunk_size else 256
+
+            # Cohere models: use input_type="search_query" or "search_document"
+            # Max 96 texts per request for v3/v4
+            case m if "cohere" in m:
+                if input_type:
+                    extra_body = {"input_type": input_type}
+                else:
+                    extra_body = {}
+                chunk_size = int(env_chunk_size) if env_chunk_size else 96
+
+            # OpenAI models: no extra params needed
+            # Max ~2048 texts per request
+            case m if "text-embedding" in m or "openai" in m:
+                extra_body = {}
+                chunk_size = int(env_chunk_size) if env_chunk_size else 2048
+
+            # Default fallback: pass input_type if provided
+            # Conservative default of 96
+            case _:
+                if input_type:
+                    extra_body = {"input_type": input_type}
+                else:
+                    extra_body = {}
+                chunk_size = int(env_chunk_size) if env_chunk_size else 96
 
         return OpenAIEmbeddings(
             model=custom_embed_model,
@@ -627,7 +743,7 @@ def get_effective_embedding_model(model: str = "text-embedding-3-small") -> str:
         get_effective_embedding_model("text-embedding-3-small")  # Returns "qwen3-0.6b"
     """
     # Check if local embeddings are enabled
-    use_local = os.environ.get("USE_LOCAL_EMBEDDINGS", "true").lower() != "false"
+    use_local = os.environ.get("USE_LOCAL_EMBEDDINGS", "").lower() == "true"
 
     if use_local:
         # Return the local model name that will be used
