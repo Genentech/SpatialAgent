@@ -27,6 +27,16 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 warnings.filterwarnings('ignore')
 
 
+# Module-level config (set via configure_analytics_tools)
+_config = {
+    "save_path": "./experiments",
+}
+
+def configure_analytics_tools(save_path: str = "./experiments"):
+    """Configure paths for analytics tools. Call this before using the tools."""
+    _config["save_path"] = save_path
+
+
 # Default model for subagent LLM calls (fallback if agent model not set)
 DEFAULT_SUBAGENT_MODEL = "claude-sonnet-4-5-20250929"
 
@@ -58,9 +68,10 @@ def _get_subagent_model() -> str:
 @tool
 def preprocess_spatial_data(
     adata_path: Annotated[str, Field(description="Path to raw spatial transcriptomics h5ad file")],
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Preprocess spatial transcriptomics data using Scanpy pipeline."""
+    save_path = save_path or _config["save_path"]
     # Heavy imports - only load when this tool is called
     import scanpy as sc
 
@@ -113,10 +124,11 @@ def preprocess_spatial_data(
 def harmony_transfer_labels(
     adata_path: Annotated[str, Field(description="Path to preprocessed spatial data")],
     ref_path: Annotated[str, Field(description="Path to CZI reference scRNA data")],
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
     czi_index: Annotated[int, Field(ge=0, description="Index for naming output files")] = 0,
 ) -> str:
     """Transfer cell type labels from CZI reference to spatial data using Harmony integration."""
+    save_path = save_path or _config["save_path"]
     # Heavy imports - only load when this tool is called
     import scanpy as sc
     import scanpy.external as sce
@@ -288,7 +300,7 @@ def _remove_small_clusters(adata, label_key, slide_key=None, min_cells=100):
 @tool
 def run_utag_clustering(
     adata_path: Annotated[str, Field(description="Path to annotated spatial data")],
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
     slide_key: Annotated[str, Field(description="Column for sample/slide ID to run UTAG per sample (e.g., 'batch', 'sample_id')")] = None,
     max_dist: Annotated[float, Field(description="Max distance for neighbors. Use 0 for auto-estimation.")] = 0,
     min_cluster_size: Annotated[int, Field(description="Min cells per cluster (smaller merged to nearest)")] = 100,
@@ -308,6 +320,7 @@ def run_utag_clustering(
     - Removes small clusters and reassigns cells to nearest larger cluster
     - Tries multiple resolutions and picks one with enough niches
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import matplotlib.pyplot as plt
     from utag import utag
@@ -408,9 +421,10 @@ def run_utag_clustering(
 def aggregate_gene_voting(
     adata_path: Annotated[str, Field(description="Path to annotated spatial data")],
     group_by: Annotated[str, Field(description="Column to group by (e.g., 'celltype', 'niche')")],
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Aggregate marker genes across cells/niches using LLM-based voting."""
+    save_path = save_path or _config["save_path"]
     # Heavy imports
     import scanpy as sc
     from ..agent import make_llm
@@ -464,7 +478,7 @@ def liana_tensor(
     condition_key: Annotated[str, Field(description="Condition column name")],
     cell_type_key: Annotated[str, Field(description="Cell type column name")],
     organism: Annotated[str, Field(description="'human', 'mouse', or 'auto'")] = "auto",
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run LIANA + Tensor-Cell2Cell for multi-sample interaction analysis.
 
@@ -473,6 +487,7 @@ def liana_tensor(
     2. Build interaction tensor (samples x interactions x senders x receivers)
     3. Non-negative tensor factorization into latent factors
     """
+    save_path = save_path or _config["save_path"]
     # Heavy imports - only load when this tool is called
     import scanpy as sc
     from tqdm.auto import tqdm
@@ -581,9 +596,10 @@ def infer_dynamics(
     condition_column: Annotated[str, Field(description="Column containing condition labels")],
     condition1: Annotated[str, Field(description="First condition (e.g., 'control')")],
     condition2: Annotated[str, Field(description="Second condition (e.g., 'disease')")],
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compare conditions with differential expression gene (DEG) analysis."""
+    save_path = save_path or _config["save_path"]
     # Heavy imports
     import scanpy as sc
 
@@ -630,9 +646,10 @@ def summarize_conditions(
     adata_path: Annotated[str, Field(description="Path to spatial data with condition labels")],
     condition_key: Annotated[str, Field(description="Column name for condition labels")],
     cell_type_key: Annotated[str, Field(description="Column name for cell type annotations")] = "cell_type",
-    save_path: Annotated[str, Field(description="Directory to save summary")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save summary")] = None,
 ) -> str:
     """Summarize cell type distributions across different conditions."""
+    save_path = save_path or _config["save_path"]
     # Heavy imports
     import scanpy as sc
 
@@ -715,9 +732,10 @@ def summarize_conditions(
 def summarize_celltypes(
     adata_path: Annotated[str, Field(description="Path to annotated spatial data")],
     cell_type_key: Annotated[str, Field(description="Column name for cell type annotations")] = "cell_type",
-    save_path: Annotated[str, Field(description="Directory to save summary")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save summary")] = None,
 ) -> str:
     """Summarize cell type distributions and marker genes in the dataset."""
+    save_path = save_path or _config["save_path"]
     # Heavy imports
     import scanpy as sc
 
@@ -796,9 +814,10 @@ def summarize_tissue_regions(
     adata_path: Annotated[str, Field(description="Path to spatial data with region annotations")],
     region_key: Annotated[str, Field(description="Column name for region/niche annotations")] = "spatial_cluster",
     cell_type_key: Annotated[str, Field(description="Column name for cell type annotations")] = "cell_type",
-    save_path: Annotated[str, Field(description="Directory to save summary")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save summary")] = None,
 ) -> str:
     """Summarize tissue regions and their cell type compositions."""
+    save_path = save_path or _config["save_path"]
     # Heavy imports
     import scanpy as sc
 
@@ -889,13 +908,14 @@ def tangram_preprocess(
     marker_genes: Annotated[str, Field(description="Comma-separated genes, or 'auto' to compute from scRNA-seq")] = "auto",
     cell_type_key: Annotated[str, Field(description="Cell type column for auto marker detection")] = "cell_type",
     n_markers: Annotated[int, Field(description="Top markers per cell type if auto")] = 100,
-    save_path: Annotated[str, Field(description="Directory to save preprocessed data")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save preprocessed data")] = None,
 ) -> str:
     """Preprocess scRNA-seq and spatial data for Tangram mapping.
 
     Finds shared genes, removes zero-valued genes, and computes density priors.
     Must run before tangram_map_cells.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import tangram as tg
 
@@ -933,12 +953,13 @@ def tangram_map_cells(
     cluster_label: Annotated[str, Field(description="Cell type column for 'clusters' mode")] = "cell_type",
     device: Annotated[str, Field(description="'cpu' or 'cuda:0'")] = "cpu",
     num_epochs: Annotated[int, Field(description="Training epochs")] = 500,
-    save_path: Annotated[str, Field(description="Directory to save mapping")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save mapping")] = None,
 ) -> str:
     """Map single cells onto spatial locations using Tangram.
 
     Creates cell-by-spot probability matrix by optimizing gene expression similarity.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import tangram as tg
 
@@ -974,12 +995,13 @@ def tangram_project_annotations(
     adata_map_path: Annotated[str, Field(description="Path to Tangram mapping")],
     adata_sp_path: Annotated[str, Field(description="Path to spatial data")],
     annotation: Annotated[str, Field(description="Annotation to project (e.g., 'cell_type')")] = "cell_type",
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Project cell type annotations onto spatial data.
 
     Transfers cell type probabilities to spatial spots based on mapping.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import tangram as tg
 
@@ -1006,12 +1028,13 @@ def tangram_project_genes(
     adata_map_path: Annotated[str, Field(description="Path to Tangram mapping")],
     adata_sc_path: Annotated[str, Field(description="Path to scRNA-seq data")],
     cluster_label: Annotated[str, Field(description="Cluster label if 'clusters' mode used")] = "",
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Project gene expression from scRNA-seq onto spatial locations.
 
     Creates imputed spatial gene expression for the entire transcriptome.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import tangram as tg
 
@@ -1035,12 +1058,13 @@ def tangram_project_genes(
 def tangram_evaluate(
     adata_ge_path: Annotated[str, Field(description="Path to projected genes (from tangram_project_genes)")],
     adata_sp_path: Annotated[str, Field(description="Path to spatial data (original or preprocessed)")],
-    save_path: Annotated[str, Field(description="Directory to save evaluation")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save evaluation")] = None,
 ) -> str:
     """Evaluate Tangram mapping quality.
 
     Computes per-gene cosine similarity between predicted and measured expression.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import matplotlib.pyplot as plt
     from scipy import sparse
@@ -1122,13 +1146,14 @@ def cellphonedb_prepare(
     adata_path: Annotated[str, Field(description="Path to AnnData h5ad file")],
     cell_type_key: Annotated[str, Field(description="Column in obs for cell type annotations")] = "cell_type",
     layer: Annotated[str, Field(description="Layer to use for counts (empty for .X)")] = "",
-    save_path: Annotated[str, Field(description="Directory to save prepared files")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save prepared files")] = None,
 ) -> str:
     """Prepare AnnData for CellPhoneDB analysis.
 
     Extracts counts matrix and metadata files required by CellPhoneDB methods.
     Converts gene symbols to human format if needed.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
 
     os.makedirs(save_path, exist_ok=True)
@@ -1170,7 +1195,7 @@ def cellphonedb_analysis(
     microenvs_path: Annotated[str, Field(description="Path to microenvironments file (optional, restricts to colocalized cells)")] = "",
     score_interactions: Annotated[bool, Field(description="Score interactions by specificity (0-10 scale)")] = False,
     threads: Annotated[int, Field(description="Number of threads")] = 4,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run CellPhoneDB analysis (statistical or simple).
 
@@ -1179,6 +1204,7 @@ def cellphonedb_analysis(
 
     Outputs: means.txt, pvalues.txt, significant_means.txt, deconvoluted.txt
     """
+    save_path = save_path or _config["save_path"]
     os.makedirs(save_path, exist_ok=True)
 
     # Get CellPhoneDB database path
@@ -1249,7 +1275,7 @@ def cellphonedb_degs_analysis(
     microenvs_path: Annotated[str, Field(description="Path to microenvironments file (optional, restricts to colocalized cells)")] = "",
     score_interactions: Annotated[bool, Field(description="Score interactions by specificity (0-10 scale)")] = False,
     threads: Annotated[int, Field(description="Number of threads")] = 4,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run CellPhoneDB DEG-based analysis (METHOD 3).
 
@@ -1259,6 +1285,7 @@ def cellphonedb_degs_analysis(
     DEGs file format: Two columns - 'Cell' (cell type) and 'Gene' (gene symbol).
     Only interactions with at least one DEG are returned as relevant.
     """
+    save_path = save_path or _config["save_path"]
     from cellphonedb.src.core.methods import cpdb_degs_analysis_method
 
     os.makedirs(save_path, exist_ok=True)
@@ -1302,12 +1329,13 @@ def cellphonedb_filter(
     cell_types: Annotated[str, Field(description="Comma-separated cell types to filter (e.g., 'T cell,B cell')")] = "",
     genes: Annotated[str, Field(description="Comma-separated genes to filter")] = "",
     min_mean: Annotated[float, Field(description="Minimum mean expression threshold")] = 0.0,
-    save_path: Annotated[str, Field(description="Directory to save filtered results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save filtered results")] = None,
 ) -> str:
     """Search and filter CellPhoneDB results.
 
     Filters significant interactions by cell types, genes, or expression levels.
     """
+    save_path = save_path or _config["save_path"]
     os.makedirs(save_path, exist_ok=True)
 
     # Load results
@@ -1367,12 +1395,13 @@ def cellphonedb_plot(
     plot_type: Annotated[str, Field(description="'dotplot', 'heatmap', or 'chord'")] = "dotplot",
     cell_types: Annotated[str, Field(description="Comma-separated cell types to include (empty for all)")] = "",
     top_n: Annotated[int, Field(description="Number of top interactions to plot")] = 30,
-    save_path: Annotated[str, Field(description="Directory to save plots")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save plots")] = None,
 ) -> str:
     """Visualize CellPhoneDB results.
 
     Creates dot plots, heatmaps, or chord diagrams of significant interactions.
     """
+    save_path = save_path or _config["save_path"]
     import matplotlib.pyplot as plt
     import seaborn as sns
 
@@ -1494,13 +1523,14 @@ def liana_inference(
     sample_key: Annotated[str, Field(description="Column for sample IDs (empty for single-sample)")] = "",
     organism: Annotated[str, Field(description="'human', 'mouse', or 'auto'")] = "auto",
     expr_prop: Annotated[float, Field(description="Min proportion of cells expressing gene")] = 0.1,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run LIANA rank aggregate for ligand-receptor inference.
 
     Combines multiple LR methods (CellPhoneDB, CellChat, NATMI, etc.) into consensus rankings.
     Works for single-sample or multi-sample analysis.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import liana as li
 
@@ -1567,13 +1597,14 @@ def liana_spatial(
     bandwidth: Annotated[float, Field(description="Spatial bandwidth for neighbor weights")] = 200,
     n_perms: Annotated[int, Field(description="Permutations for p-value calculation")] = 100,
     organism: Annotated[str, Field(description="'human', 'mouse', or 'auto'")] = "auto",
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run LIANA spatial bivariate analysis.
 
     Computes local and global spatial correlations between ligand-receptor pairs.
     Requires spatial coordinates in adata.obsm['spatial'].
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import liana as li
 
@@ -1633,13 +1664,14 @@ def liana_misty(
     bandwidth: Annotated[float, Field(description="Spatial bandwidth for para view")] = 200,
     n_neighs: Annotated[int, Field(description="Number of neighbors for juxta view")] = 6,
     model_type: Annotated[str, Field(description="'linear' or 'rf' (random forest)")] = "linear",
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run LIANA MISTy for learning spatial relationships.
 
     Models how features in different spatial contexts (intra, juxta, para) predict target features.
     Useful for understanding spatial dependencies between cell types, pathways, or gene programs.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import liana as li
     from liana.method import genericMistyData
@@ -1725,12 +1757,13 @@ def liana_plot(
     source_cells: Annotated[str, Field(description="Comma-separated source cell types to include")] = "",
     target_cells: Annotated[str, Field(description="Comma-separated target cell types to include")] = "",
     top_n: Annotated[int, Field(description="Number of top interactions to plot")] = 20,
-    save_path: Annotated[str, Field(description="Directory to save plots")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save plots")] = None,
 ) -> str:
     """Visualize LIANA results.
 
     Creates dotplots, tileplots, or source-target network plots of LR interactions.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import matplotlib.pyplot as plt
     import seaborn as sns
@@ -1841,7 +1874,7 @@ def squidpy_spatial_neighbors(
     n_rings: Annotated[int, Field(description="Number of rings (for grid coord_type, e.g., Visium)")] = 1,
     delaunay: Annotated[bool, Field(description="Use Delaunay triangulation")] = False,
     radius: Annotated[float, Field(description="Radius for neighbor search (0 to disable)")] = 0,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Build spatial neighbors graph for downstream spatial analysis.
 
@@ -1853,6 +1886,7 @@ def squidpy_spatial_neighbors(
     - 'grid': For Visium and other grid-based spatial data
     - 'generic': For MERFISH, SeqFISH, Slide-seq, and other non-grid data
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import squidpy as sq
 
@@ -1897,13 +1931,14 @@ def squidpy_nhood_enrichment(
     adata_path: Annotated[str, Field(description="Path to AnnData h5ad file (with spatial neighbors)")],
     cluster_key: Annotated[str, Field(description="Column in obs for cluster/cell type annotations")] = "cell_type",
     n_perms: Annotated[int, Field(description="Number of permutations for significance")] = 1000,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compute neighborhood enrichment between cell type clusters.
 
     Tests whether cell types are enriched or depleted as neighbors compared to random.
     Requires spatial neighbors graph (run squidpy_spatial_neighbors first).
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import squidpy as sq
     import matplotlib.pyplot as plt
@@ -1955,13 +1990,14 @@ def squidpy_co_occurrence(
     spatial_key: Annotated[str, Field(description="Key in obsm for spatial coordinates")] = "spatial",
     interval: Annotated[int, Field(description="Number of distance intervals")] = 50,
     n_splits: Annotated[int, Field(description="Number of spatial splits for computation")] = 2,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compute co-occurrence probability between cell types across distances.
 
     Calculates conditional probability of observing one cell type given another
     at various spatial distances.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import squidpy as sq
     import matplotlib.pyplot as plt
@@ -2002,13 +2038,14 @@ def squidpy_spatial_autocorr(
     genes: Annotated[str, Field(description="Comma-separated genes, or 'hvg' for highly variable, or 'all'")] = "hvg",
     n_perms: Annotated[int, Field(description="Number of permutations")] = 100,
     n_jobs: Annotated[int, Field(description="Number of parallel jobs")] = 4,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compute spatial autocorrelation (Moran's I or Geary's C) for genes.
 
     Identifies genes with significant spatial patterns.
     Requires spatial neighbors graph (run squidpy_spatial_neighbors first).
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import squidpy as sq
 
@@ -2065,12 +2102,13 @@ def squidpy_ripley(
     adata_path: Annotated[str, Field(description="Path to AnnData h5ad file")],
     cluster_key: Annotated[str, Field(description="Column in obs for cluster annotations")] = "cell_type",
     mode: Annotated[str, Field(description="'L' (Ripley's L), 'F', or 'G'")] = "L",
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compute Ripley's statistics for spatial point pattern analysis.
 
     Determines whether cell types show clustered, random, or dispersed spatial patterns.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import squidpy as sq
     import matplotlib.pyplot as plt
@@ -2106,13 +2144,14 @@ def squidpy_ripley(
 def squidpy_centrality(
     adata_path: Annotated[str, Field(description="Path to AnnData h5ad file (with spatial neighbors)")],
     cluster_key: Annotated[str, Field(description="Column in obs for cluster annotations")] = "cell_type",
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compute centrality scores for cell type clusters in spatial graph.
 
     Calculates closeness centrality, clustering coefficient, and degree centrality.
     Requires spatial neighbors graph (run squidpy_spatial_neighbors first).
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import squidpy as sq
     import matplotlib.pyplot as plt
@@ -2160,13 +2199,14 @@ def squidpy_interaction_matrix(
     adata_path: Annotated[str, Field(description="Path to AnnData h5ad file (with spatial neighbors)")],
     cluster_key: Annotated[str, Field(description="Column in obs for cluster annotations")] = "cell_type",
     normalized: Annotated[bool, Field(description="Row-normalize the interaction matrix")] = True,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compute interaction matrix between cell type clusters.
 
     Quantifies the number of edges between cell types in the spatial graph.
     Requires spatial neighbors graph (run squidpy_spatial_neighbors first).
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import squidpy as sq
     import matplotlib.pyplot as plt
@@ -2213,12 +2253,13 @@ def squidpy_ligrec(
     cluster_key: Annotated[str, Field(description="Column in obs for cluster annotations")] = "cell_type",
     n_perms: Annotated[int, Field(description="Number of permutations")] = 1000,
     threshold: Annotated[float, Field(description="Min fraction of cells expressing gene")] = 0.1,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run receptor-ligand analysis using Squidpy and OmniPath database.
 
     Identifies significant ligand-receptor interactions between cell types.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import squidpy as sq
 
@@ -2268,7 +2309,7 @@ def destvi_deconvolution(
     layer: Annotated[str, Field(description="Layer to use for counts (empty for .X)")] = "",
     sc_max_epochs: Annotated[int, Field(description="Max epochs for single-cell model")] = 300,
     st_max_epochs: Annotated[int, Field(description="Max epochs for spatial model")] = 2500,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run DestVI for multi-resolution spatial deconvolution.
 
@@ -2278,6 +2319,7 @@ def destvi_deconvolution(
 
     Outputs: Cell type proportions per spot, gamma latent space, trained models.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import scvi
     from scvi.model import CondSCVI, DestVI
@@ -2350,7 +2392,7 @@ def cell2location_mapping(
     detection_alpha: Annotated[float, Field(description="Detection sensitivity (200 default, 20 for high variation)")] = 200,
     sc_max_epochs: Annotated[int, Field(description="Max epochs for reference model")] = 250,
     st_max_epochs: Annotated[int, Field(description="Max epochs for spatial model")] = 30000,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run Cell2location for spatial cell type mapping.
 
@@ -2363,6 +2405,7 @@ def cell2location_mapping(
 
     Outputs: Cell abundance per spot (q05 quantile = confident estimates).
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     from cell2location.models import Cell2location, RegressionModel
 
@@ -2456,7 +2499,7 @@ def stereoscope_deconvolution(
     layer: Annotated[str, Field(description="Layer to use for counts (empty for .X)")] = "",
     sc_max_epochs: Annotated[int, Field(description="Max epochs for single-cell model")] = 100,
     st_max_epochs: Annotated[int, Field(description="Max epochs for spatial model")] = 2000,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run Stereoscope for spatial cell type deconvolution.
 
@@ -2465,6 +2508,7 @@ def stereoscope_deconvolution(
 
     Outputs: Cell type proportions per spot, trained models.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     from scvi.external import RNAStereoscope, SpatialStereoscope
 
@@ -2533,7 +2577,7 @@ def gimvi_imputation(
     genes_to_impute: Annotated[str, Field(description="Comma-separated genes to impute (empty for all missing)")] = "",
     layer: Annotated[str, Field(description="Layer to use for counts (empty for .X)")] = "",
     max_epochs: Annotated[int, Field(description="Max training epochs")] = 200,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run gimVI for gene imputation in spatial data.
 
@@ -2544,6 +2588,7 @@ def gimvi_imputation(
 
     Outputs: Imputed gene expression matrix, imputed spatial AnnData.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     from scvi.external import GIMVI
 
@@ -2638,7 +2683,7 @@ def spagcn_clustering(
     refine: Annotated[bool, Field(description="Whether to refine clusters using spatial adjacency")] = True,
     shape: Annotated[str, Field(description="Spot shape: 'hexagon' for Visium, 'square' for ST")] = "hexagon",
     max_epochs: Annotated[int, Field(description="Maximum training epochs")] = 200,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run SpaGCN for spatial domain detection.
 
@@ -2647,6 +2692,7 @@ def spagcn_clustering(
 
     Outputs: Cluster assignments, refined clusters (optional), trained model.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import SpaGCN as spg
     import random
@@ -2762,7 +2808,7 @@ def graphst_clustering(
     n_neighbors: Annotated[int, Field(description="Number of neighbors for graph construction")] = 10,
     random_seed: Annotated[int, Field(description="Random seed for reproducibility")] = 42,
     device: Annotated[str, Field(description="Device: 'cuda' or 'cpu'")] = "cuda",
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Run GraphST for spatial domain detection.
 
@@ -2774,6 +2820,7 @@ def graphst_clustering(
 
     Outputs: Cluster assignments, spatial embeddings, trained model.
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import torch
     from GraphST.GraphST import GraphST
@@ -2859,7 +2906,7 @@ def scanpy_score_genes(
     ctrl_size: Annotated[int, Field(description="Number of control genes per binned expression level")] = 50,
     n_bins: Annotated[int, Field(description="Number of expression bins for control gene selection")] = 25,
     use_raw: Annotated[bool, Field(description="Use raw expression data if available")] = False,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Score cells/spots based on expression of a gene signature using Scanpy.
 
@@ -2873,6 +2920,7 @@ def scanpy_score_genes(
     - Score cells for cell type markers
     - Score cells for custom gene signatures from literature
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
 
     adata = sc.read_h5ad(adata_path)
@@ -2937,7 +2985,7 @@ def scanpy_ingest(
     obs_keys: Annotated[list[str], Field(description="Observation keys to transfer from reference (e.g., ['cell_type', 'cluster'])")],
     embedding: Annotated[str, Field(description="Embedding to use for mapping: 'pca' or 'umap'")] = "umap",
     use_rep: Annotated[str, Field(description="Key in adata.obsm for representation (e.g., 'X_pca')")] = "X_pca",
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Transfer annotations from a reference dataset to a query dataset using Scanpy ingest.
 
@@ -2954,6 +3002,7 @@ def scanpy_ingest(
     - Transfer cell type labels from annotated scRNA-seq to spatial data
     - Annotate new samples using a well-curated reference atlas
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
 
     adata_query = sc.read_h5ad(adata_query_path)
@@ -3029,7 +3078,7 @@ def scanpy_bbknn(
     trim: Annotated[int, Field(description="Trim KNN graph to this many neighbors per cell (0=no trim)")] = 0,
     use_rep: Annotated[str, Field(description="Key in adata.obsm for representation")] = "X_pca",
     run_umap: Annotated[bool, Field(description="Compute UMAP after batch correction")] = True,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Perform batch-balanced KNN (BBKNN) integration for multi-batch data.
 
@@ -3046,6 +3095,7 @@ def scanpy_bbknn(
     - Integrate spatial data with scRNA-seq reference
     - Remove technical batch effects while preserving biological variation
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
 
     try:
@@ -3114,7 +3164,7 @@ def scvelo_velocity(
     n_top_genes: Annotated[int, Field(description="Number of highly variable genes to use")] = 2000,
     n_pcs: Annotated[int, Field(description="Number of PCs for neighbors")] = 30,
     n_neighbors: Annotated[int, Field(description="Number of neighbors")] = 30,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compute RNA velocity using scVelo.
 
@@ -3131,6 +3181,7 @@ def scvelo_velocity(
     - stochastic: Accounts for transcriptional stochasticity (recommended)
     - dynamical: Full dynamical model, most accurate but slower
     """
+    save_path = save_path or _config["save_path"]
     import scvelo as scv
     import scanpy as sc
 
@@ -3180,7 +3231,7 @@ def scvelo_velocity_embedding(
     adata_path: Annotated[str, Field(description="Path to h5ad file with computed velocity")],
     basis: Annotated[str, Field(description="Embedding to use: 'umap', 'tsne', or 'pca'")] = "umap",
     color_by: Annotated[str, Field(description="Column in adata.obs to color by")] = None,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Project RNA velocity onto embedding and create velocity stream plot.
 
@@ -3191,6 +3242,7 @@ def scvelo_velocity_embedding(
     - Data must have velocity computed (from scvelo_velocity)
     - Data must have the specified embedding (e.g., X_umap)
     """
+    save_path = save_path or _config["save_path"]
     import scvelo as scv
     import scanpy as sc
     import matplotlib.pyplot as plt
@@ -3250,7 +3302,7 @@ def cellrank_terminal_states(
     cluster_key: Annotated[str, Field(description="Column in adata.obs for cell clusters")] = None,
     n_states: Annotated[int, Field(description="Number of terminal states to find (0=auto)")] = 0,
     use_velocity: Annotated[bool, Field(description="Use RNA velocity (requires velocity layer)")] = True,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Identify terminal/macrostates using CellRank.
 
@@ -3265,6 +3317,7 @@ def cellrank_terminal_states(
     - Terminal states (macrostates) identified in adata.obs
     - Transition probabilities stored in adata
     """
+    save_path = save_path or _config["save_path"]
     import cellrank as cr
     import scanpy as sc
 
@@ -3323,7 +3376,7 @@ def cellrank_terminal_states(
 @tool
 def cellrank_fate_probabilities(
     adata_path: Annotated[str, Field(description="Path to h5ad file with terminal states")],
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compute fate probabilities for each cell towards terminal states.
 
@@ -3337,6 +3390,7 @@ def cellrank_fate_probabilities(
     - Fate probabilities in adata.obsm['to_terminal_states']
     - Lineage drivers (genes correlated with fate)
     """
+    save_path = save_path or _config["save_path"]
     import cellrank as cr
     import scanpy as sc
     import matplotlib.pyplot as plt
@@ -3392,7 +3446,7 @@ def paga_trajectory(
     groups_key: Annotated[str, Field(description="Column in adata.obs for cell groups (e.g., 'leiden', 'cell_type')")],
     threshold: Annotated[float, Field(description="Threshold for PAGA edges (0-1)")] = 0.05,
     root_group: Annotated[str, Field(description="Name of root group for pseudotime (optional)")] = None,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Compute PAGA (Partition-based Graph Abstraction) trajectory.
 
@@ -3403,6 +3457,7 @@ def paga_trajectory(
     - Data must have neighbors computed
     - Data must have the specified groups column
     """
+    save_path = save_path or _config["save_path"]
     import scanpy as sc
     import matplotlib.pyplot as plt
 
@@ -3479,7 +3534,7 @@ def totalvi_integration(
     n_latent: Annotated[int, Field(description="Dimensionality of latent space")] = 20,
     max_epochs: Annotated[int, Field(description="Maximum training epochs")] = 400,
     batch_key: Annotated[str, Field(description="Batch column for integration (optional)")] = None,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Integrate RNA and protein data using totalVI (CITE-seq analysis).
 
@@ -3495,6 +3550,7 @@ def totalvi_integration(
     - Denoised protein values
     - Normalized RNA values
     """
+    save_path = save_path or _config["save_path"]
     import scvi
     import scanpy as sc
 
@@ -3564,7 +3620,7 @@ def multivi_integration(
     n_latent: Annotated[int, Field(description="Dimensionality of latent space")] = 20,
     max_epochs: Annotated[int, Field(description="Maximum training epochs")] = 500,
     batch_key: Annotated[str, Field(description="Batch column for integration (optional)")] = None,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Integrate RNA and ATAC data using MultiVI (multiome analysis).
 
@@ -3580,6 +3636,7 @@ def multivi_integration(
     - Imputed accessibility for RNA-only cells
     - Imputed expression for ATAC-only cells
     """
+    save_path = save_path or _config["save_path"]
     import scvi
     import scanpy as sc
 
@@ -3631,7 +3688,7 @@ def mofa_integration(
     modality_key: Annotated[str, Field(description="Column in adata.var indicating modality (if single file)")] = None,
     groups_key: Annotated[str, Field(description="Column in adata.obs for sample/group structure")] = None,
     max_iterations: Annotated[int, Field(description="Maximum training iterations")] = 1000,
-    save_path: Annotated[str, Field(description="Directory to save results")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory to save results")] = None,
 ) -> str:
     """Perform multi-omics factor analysis using MOFA+.
 
@@ -3648,6 +3705,7 @@ def mofa_integration(
     - Factor loadings (weights) per modality
     - Variance explained per factor per modality
     """
+    save_path = save_path or _config["save_path"]
     from mofapy2.run.entry_point import entry_point
     import scanpy as sc
 

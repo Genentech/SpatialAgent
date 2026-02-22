@@ -1,6 +1,6 @@
 class AgentPrompts:
 	@staticmethod
-	def SYSTEM_PROMPT(tool_details: str) -> str:
+	def SYSTEM_PROMPT(tool_details: str, save_path: str = "./experiments") -> str:
 		"""
 		Simplified, execution-focused system prompt for SpatialAgent.
 		Uses plan → act → conclude workflow with clear tag-based execution.
@@ -40,8 +40,8 @@ At each turn, you must respond with EXACTLY ONE of the following:
    ✅ CORRECT - Call tools directly:
      result = search_czi_datasets({{"query": "human liver", "n_datasets": 3}})
      result = search_panglao({{"cell_types": "T cell", "organism": "Hs", "tissue": "liver"}})
-     result = extract_czi_markers({{"save_path": "./experiments", "dataset_id": "abc123", "iter_round": 1}})
-     result = harmony_transfer_labels({{"adata_path": "data.h5ad", "ref_path": "ref.h5ad", "save_path": "./out"}})
+     result = extract_czi_markers({{"save_path": "{save_path}", "dataset_id": "abc123", "iter_round": 1}})
+     result = harmony_transfer_labels({{"adata_path": "data.h5ad", "ref_path": "ref.h5ad", "save_path": "{save_path}"}})
 
    ❌ WRONG - NEVER import tools (they don't exist as modules!):
      from tools import search_czi_datasets          # ERROR: No module named 'tools'

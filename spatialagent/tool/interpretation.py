@@ -28,6 +28,15 @@ from pydantic import Field
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
+# Module-level config (set via configure_interpretation_tools)
+_config = {
+    "save_path": "./experiments",
+}
+
+def configure_interpretation_tools(save_path: str = "./experiments"):
+    """Configure paths for interpretation tools. Call this before using the tools."""
+    _config["save_path"] = save_path
+
 # Default paths for data files
 DEFAULT_DATA_PATH = "./data"
 
@@ -288,7 +297,7 @@ def annotate_cell_types(
     adata_path: Annotated[str, Field(description="Path to preprocessed spatial data")],
     transferred_celltype: Annotated[str, Field(description="Path to transferred cell type CSV")],
     data_info: Annotated[str, Field(description="Dataset description (e.g., 'human heart MERFISH')")],
-    save_path: Annotated[str, Field(description="Experiment directory")] = "./experiments",
+    save_path: Annotated[str, Field(description="Experiment directory")] = None,
     resolution: Annotated[float, Field(description="Leiden resolution (0=auto)")] = 0,
 ) -> str:
     """Annotate cell type clusters using hierarchical two-level batch approach.
@@ -309,6 +318,7 @@ def annotate_cell_types(
     import matplotlib.pyplot as plt
     from ..agent import make_llm
 
+    save_path = save_path or _config["save_path"]
     llm = make_llm(_get_subagent_model(), stop_sequences=[])
     output_path = f"{save_path}/celltype_annotated.h5ad"
 
@@ -799,7 +809,7 @@ def annotate_tissue_niches(
     adata_path: Annotated[str, Field(description="Path to spatial data with cell types")],
     utag_csv: Annotated[str, Field(description="Path to UTAG clustering results CSV")],
     data_info: Annotated[str, Field(description="Dataset description (e.g., 'human heart MERFISH')")],
-    save_path: Annotated[str, Field(description="Experiment directory")] = "./experiments",
+    save_path: Annotated[str, Field(description="Experiment directory")] = None,
     anatomical_path: Annotated[str, Field(description="Optional path to anatomical tissue image")] = None,
     utag_column: Annotated[str, Field(description="UTAG label column to use")] = "utag",
     celltype_column: Annotated[str, Field(description="Cell type column in adata.obs")] = "cell_type",
@@ -823,6 +833,7 @@ def annotate_tissue_niches(
     import json
     from ..agent import make_llm
 
+    save_path = save_path or _config["save_path"]
     # Single LLM for all operations (vision-capable)
     llm = make_llm(_get_subagent_model(), stop_sequences=[])
 

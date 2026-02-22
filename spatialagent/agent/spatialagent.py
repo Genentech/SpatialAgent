@@ -97,6 +97,14 @@ class SpatialAgent:
         self.observation_log = []
         self._observation_log_path = os.path.join(save_path, "observation_log.jsonl")
 
+        # Resolve to absolute paths so users can see what directory is actually used
+        data_path = os.path.abspath(data_path)
+        save_path = os.path.abspath(save_path)
+        self.save_path = save_path
+        self.data_path = data_path
+        print(f"Data path: {data_path}", flush=True)
+        print(f"Save path: {save_path}", flush=True)
+
         # Create directories if they don't exist
         os.makedirs(save_path, exist_ok=True)
         os.makedirs(data_path, exist_ok=True)
@@ -269,7 +277,7 @@ The system will retrieve relevant tools based on your task.
             tool_info = "\n".join(tool_descriptions)
 
         # Use existing SYSTEM_PROMPT template but with dynamic tool info
-        return AgentPrompts.SYSTEM_PROMPT(tool_info)
+        return AgentPrompts.SYSTEM_PROMPT(tool_info, save_path=self.save_path)
 
 
     def _build_graph(self) -> StateGraph:
