@@ -433,6 +433,23 @@ LOCAL_EMBEDDING_MODELS = {
 DEFAULT_LOCAL_EMBEDDING_MODEL = "qwen3-0.6b"
 
 
+def _should_use_local_embeddings(use_local: bool = None) -> bool:
+    """Check whether local embeddings should be used.
+
+    Single source of truth for the USE_LOCAL_EMBEDDINGS env var check.
+    Used by both make_llm_emb() and get_effective_embedding_model().
+
+    Args:
+        use_local: Explicit override. If None, checks USE_LOCAL_EMBEDDINGS env var.
+
+    Returns:
+        True if local embeddings should be used, False for API embeddings.
+    """
+    if use_local is not None:
+        return use_local
+    return os.environ.get("USE_LOCAL_EMBEDDINGS", "false").lower() != "false"
+
+
 class LocalEmbeddings:
     """
     Local embedding model using sentence-transformers.
@@ -519,7 +536,7 @@ def make_llm_emb(
     Create embedding model - supports Azure OpenAI, custom endpoints, or local models.
 
     Configuration priority (checked in order):
-        1. Local sentence-transformers (default, or USE_LOCAL_EMBEDDINGS != "false")
+        1. USE_LOCAL_EMBEDDINGS=true → Local sentence-transformers (default: off)
         2. CUSTOM_EMBED_BASE_URL → Custom OpenAI-compatible endpoint
         3. AZURE_API_KEY + AZURE_API_ENDPOINT → Azure OpenAI
         4. Hardcoded Azure endpoints (legacy fallback)
@@ -533,7 +550,7 @@ def make_llm_emb(
                     If None, not passed (for OpenAI models that don't need it).
 
     Environment Variables:
-        USE_LOCAL_EMBEDDINGS: Set to "false" to use API embeddings instead of local (default: true)
+        USE_LOCAL_EMBEDDINGS: Set to "true" to use local embeddings (default: false = API)
         LOCAL_EMBEDDING_MODEL: Override local model name
         CUSTOM_EMBED_BASE_URL: Custom embedding endpoint URL
         CUSTOM_EMBED_API_KEY: API key for custom endpoint
@@ -545,11 +562,8 @@ def make_llm_emb(
     Returns:
         Embeddings instance (Azure, OpenAI, or Local)
     """
-    # Check if local embeddings should be used
-    if use_local is None:
-        use_local = os.environ.get("USE_LOCAL_EMBEDDINGS", "true").lower() != "false"
-
-    if use_local:
+    # Check if local embeddings should be used (single source of truth)
+    if _should_use_local_embeddings(use_local):
         # Use local sentence-transformers model
         local_model_override = os.environ.get("LOCAL_EMBEDDING_MODEL", local_model)
         return make_llm_emb_local(local_model_override)
@@ -626,10 +640,8 @@ def get_effective_embedding_model(model: str = "text-embedding-3-small") -> str:
         # With USE_LOCAL_EMBEDDINGS=true
         get_effective_embedding_model("text-embedding-3-small")  # Returns "qwen3-0.6b"
     """
-    # Check if local embeddings are enabled
-    use_local = os.environ.get("USE_LOCAL_EMBEDDINGS", "true").lower() != "false"
-
-    if use_local:
+    # Check if local embeddings are enabled (single source of truth)
+    if _should_use_local_embeddings():
         # Return the local model name that will be used
         return os.environ.get("LOCAL_EMBEDDING_MODEL", DEFAULT_LOCAL_EMBEDDING_MODEL)
 
