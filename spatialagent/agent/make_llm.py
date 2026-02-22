@@ -236,7 +236,7 @@ def make_llm(
             model=model,
             temperature=temperature,
             streaming=streaming,
-            api_key=os.environ.get("GEMINI_API_KEY"),
+            api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"),
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             callbacks=callbacks,
             stop=stop_sequences,
