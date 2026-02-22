@@ -1,6 +1,8 @@
 .vscode
 .DS_Store
-
+.pids/
+.claude/
+data/embedding_cache
 models
 __pycache__/
 .ipynb_checkpoints/
