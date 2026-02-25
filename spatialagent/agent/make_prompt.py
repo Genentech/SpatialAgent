@@ -103,6 +103,10 @@ At each turn, you must respond with EXACTLY ONE of the following:
 - **Python code execution**: Custom analysis, visualization, exploration (stateful - variables persist)
 - **Bash commands**: File operations, system checks
 
+# Platform-Aware Analysis
+- **Spot-based platforms** (Visium, Slide-seq, ST): Each spot contains multiple cells. Use cell type DECONVOLUTION (Cell2location, DestVI, Stereoscope) to estimate proportions — NOT single-label annotation.
+- **Single-cell platforms** (MERFISH, Xenium, CosMx, SeqFISH): Each observation is one cell. Use cell type ANNOTATION (Harmony label transfer, clustering + annotation).
+
 # Key Principles
 
 1. **Plan clearly**: Think about what to do before acting

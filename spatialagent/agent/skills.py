@@ -114,7 +114,7 @@ Available templates: {skill_names}
 
 - panel_design: Design gene panels through iterative database queries (CZI CELLxGENE → PanglaoDB → CellMarker2). Use when: "design a gene panel", "find markers for cell types", "build a panel for spatial experiment", marker gene selection for targeted spatial assays.
 
-- annotation: Cell type and tissue niche annotation in spatial transcriptomics data. Use when: "annotate cell types", "identify tissue regions", "label clusters", "what cell types are in this spatial data", cluster annotation, niche identification.
+- annotation: Cell type and tissue niche annotation for SINGLE-CELL resolution spatial data (MERFISH, Xenium, CosMx, SeqFISH, FISH-based). Use when: "annotate cell types" on single-cell resolution data, "identify tissue regions", "label clusters". NOT for spot-based data (Visium, Slide-seq, ST) — use spatial_deconvolution instead.
 
 - cell_cell_communication: Cell-cell interaction analysis comparing ligand-receptor pairs across conditions. Use when: "compare interactions between conditions", "how do cell communications change", "cross-condition CCC analysis", differential interaction analysis.
 
@@ -136,7 +136,7 @@ Available templates: {skill_names}
 
 - multimodal_integration: Integrate multiple modalities - RNA+protein (TotalVI/CITE-seq), RNA+ATAC (MultiVI), or any combination (MOFA). Also handles batch correction with BBKNN. Use when: "integrate CITE-seq", "multiome analysis", "combine RNA and protein", "batch correction", "MOFA integration".
 
-- spatial_deconvolution: Estimate cell type proportions in spatial spots using deep learning methods (DestVI, Cell2location, Stereoscope, gimVI). Use when: "deconvolve Visium spots", "cell type proportions", "what fraction of each cell type", "abundance estimation", bulk-to-single-cell deconvolution.
+- spatial_deconvolution: Estimate cell type proportions in spatial spots using deep learning (DestVI, Cell2location, Stereoscope, gimVI). Use when: data is spot-based (Visium, Slide-seq, ST), "annotate cell types" on Visium, "deconvolve spots", "cell type proportions", "what fraction of each cell type", "abundance estimation". This is the correct approach for any cell type identification on spot-based platforms.
 
 - spatial_domain_detection: Identify spatial domains and tissue niches using SpaGCN (integrates histology) or GraphST (self-supervised). Use when: "find tissue regions", "spatial clustering", "identify niches", "domain detection", "tissue architecture", spatially-aware clustering.
 
