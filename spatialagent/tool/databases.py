@@ -447,88 +447,92 @@ def extract_czi_markers(
     # Read from CZI Census
     census = cellxgene_census.open_soma(census_version="latest")
 
-    all_results = []
+    try:
+        all_results = []
 
-    for did in dataset_ids:
-        # Query dataset
-        query = f'dataset_id == "{did}"'
-        adata = cellxgene_census.get_anndata(census, organism, obs_value_filter=query)
+        for did in dataset_ids:
+            # Query dataset
+            query = f'dataset_id == "{did}"'
+            adata = cellxgene_census.get_anndata(census, organism, obs_value_filter=query)
 
-        # Get cell types
-        cell_types = adata.obs["cell_type"].value_counts()
+            # Get cell types
+            cell_types = adata.obs["cell_type"].value_counts()
 
-        for cell_type, count in cell_types.items():
-            # Get cell_type_id with error handling for empty results
-            cell_type_mask = adata.obs["cell_type"] == cell_type
-            cell_type_ids = adata.obs[cell_type_mask]["cell_type_ontology_term_id"].values
+            for cell_type, count in cell_types.items():
+                # Get cell_type_id with error handling for empty results
+                cell_type_mask = adata.obs["cell_type"] == cell_type
+                cell_type_ids = adata.obs[cell_type_mask]["cell_type_ontology_term_id"].values
 
-            if len(cell_type_ids) == 0:
-                continue  # Skip if no cell_type_ontology_term_id found
+                if len(cell_type_ids) == 0:
+                    continue  # Skip if no cell_type_ontology_term_id found
 
-            cell_type_id = cell_type_ids[0]
+                cell_type_id = cell_type_ids[0]
 
-            # Get marker genes from CellGuide
-            # Note: CellGuide uses underscore format (CL_0000182) not colon format (CL:0000182)
-            cellguide_id = cell_type_id.replace(":", "_")
+                # Get marker genes from CellGuide
+                # Note: CellGuide uses underscore format (CL_0000182) not colon format (CL:0000182)
+                cellguide_id = cell_type_id.replace(":", "_")
 
-            comp_genes = []
-            cano_genes = []
+                comp_genes = []
+                cano_genes = []
 
-            # Limit marker genes to top N for readability (CellGuide can return 500+ genes)
-            MAX_MARKER_GENES = 100
+                # Limit marker genes to top N for readability (CellGuide can return 500+ genes)
+                MAX_MARKER_GENES = 100
 
-            # Helper to convert gene symbols based on organism
-            # CellGuide returns mouse-format symbols (title case like 'Grin2b')
-            # Human genes should be uppercase (GRIN2B), mouse stays title case
-            def normalize_gene_symbol(gene: str) -> str:
-                if organism == "Homo sapiens":
-                    return gene.upper()
-                return gene  # Keep mouse format as-is
+                # Helper to convert gene symbols based on organism
+                # CellGuide returns mouse-format symbols (title case like 'Grin2b')
+                # Human genes should be uppercase (GRIN2B), mouse stays title case
+                def normalize_gene_symbol(gene: str) -> str:
+                    if organism == "Homo sapiens":
+                        return gene.upper()
+                    return gene  # Keep mouse format as-is
 
-            try:
-                comp_markers = get_cellguide_file(f"computational_marker_genes/{cellguide_id}.json")
-                if comp_markers.status_code == 200 and comp_markers.text:
-                    comp_markers_df = pd.DataFrame.from_records(comp_markers.json())
-                    # Gene symbol is in 'symbol' column, not 'marker_gene'
-                    if "symbol" in comp_markers_df.columns:
-                        comp_genes = [normalize_gene_symbol(g) for g in comp_markers_df["symbol"].tolist()[:MAX_MARKER_GENES]]
-                    elif "marker_gene" in comp_markers_df.columns:
-                        comp_genes = [normalize_gene_symbol(g) for g in comp_markers_df["marker_gene"].tolist()[:MAX_MARKER_GENES]]
-            except Exception:
-                pass  # CellGuide may not have data for all cell types
+                try:
+                    comp_markers = get_cellguide_file(f"computational_marker_genes/{cellguide_id}.json")
+                    if comp_markers.status_code == 200 and comp_markers.text:
+                        comp_markers_df = pd.DataFrame.from_records(comp_markers.json())
+                        # Gene symbol is in 'symbol' column, not 'marker_gene'
+                        if "symbol" in comp_markers_df.columns:
+                            comp_genes = [normalize_gene_symbol(g) for g in comp_markers_df["symbol"].tolist()[:MAX_MARKER_GENES]]
+                        elif "marker_gene" in comp_markers_df.columns:
+                            comp_genes = [normalize_gene_symbol(g) for g in comp_markers_df["marker_gene"].tolist()[:MAX_MARKER_GENES]]
+                except Exception:
+                    pass  # CellGuide may not have data for all cell types
 
-            try:
-                cano_markers = get_cellguide_file(f"canonical_marker_genes/{cellguide_id}.json")
-                if cano_markers.status_code == 200 and cano_markers.text:
-                    cano_markers_df = pd.DataFrame.from_records(cano_markers.json())
-                    if "symbol" in cano_markers_df.columns:
-                        cano_genes = [normalize_gene_symbol(g) for g in cano_markers_df["symbol"].tolist()[:MAX_MARKER_GENES]]
-                    elif "marker_gene" in cano_markers_df.columns:
-                        cano_genes = [normalize_gene_symbol(g) for g in cano_markers_df["marker_gene"].tolist()[:MAX_MARKER_GENES]]
-            except Exception:
-                pass
+                try:
+                    cano_markers = get_cellguide_file(f"canonical_marker_genes/{cellguide_id}.json")
+                    if cano_markers.status_code == 200 and cano_markers.text:
+                        cano_markers_df = pd.DataFrame.from_records(cano_markers.json())
+                        if "symbol" in cano_markers_df.columns:
+                            cano_genes = [normalize_gene_symbol(g) for g in cano_markers_df["symbol"].tolist()[:MAX_MARKER_GENES]]
+                        elif "marker_gene" in cano_markers_df.columns:
+                            cano_genes = [normalize_gene_symbol(g) for g in cano_markers_df["marker_gene"].tolist()[:MAX_MARKER_GENES]]
+                except Exception:
+                    pass
 
-            all_results.append({
-                "cell_type": cell_type,
-                "cell_type_id": cell_type_id,
-                "n_cells": count,
-                "marker_genes": comp_genes,
-                "cano_marker_genes": cano_genes,
-            })
+                all_results.append({
+                    "cell_type": cell_type,
+                    "cell_type_id": cell_type_id,
+                    "n_cells": count,
+                    "marker_genes": comp_genes,
+                    "cano_marker_genes": cano_genes,
+                })
 
-    # Save
-    df_results = pd.DataFrame(all_results)
-    df_results.to_csv(save_csv, index=False)
+        # Save
+        df_results = pd.DataFrame(all_results)
+        df_results.to_csv(save_csv, index=False)
 
-    # Count how many cell types have marker genes
-    n_with_markers = sum(1 for r in all_results if r["marker_genes"] or r["cano_marker_genes"])
-    n_without_markers = len(all_results) - n_with_markers
+        # Count how many cell types have marker genes
+        n_with_markers = sum(1 for r in all_results if r["marker_genes"] or r["cano_marker_genes"])
+        n_without_markers = len(all_results) - n_with_markers
 
-    msg = f"Successfully processed {len(dataset_ids)} CZI dataset(s) with {len(all_results)} cell types. Saved to {save_csv}"
-    if n_without_markers > 0:
-        msg += f"\nNote: {n_with_markers} cell types have marker genes from CellGuide, {n_without_markers} do not (may need PanglaoDB/CellMarker2 lookup)."
+        msg = f"Successfully processed {len(dataset_ids)} CZI dataset(s) with {len(all_results)} cell types. Saved to {save_csv}"
+        if n_without_markers > 0:
+            msg += f"\nNote: {n_with_markers} cell types have marker genes from CellGuide, {n_without_markers} do not (may need PanglaoDB/CellMarker2 lookup)."
 
-    return msg
+        return msg
+
+    finally:
+        census.close()
 
 
 # =============================================================================
