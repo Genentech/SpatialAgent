@@ -1,0 +1,2 @@
+notebooks/demos/**/*.png filter=lfs diff=lfs merge=lfs -text
+notebooks/demos/**/*.ipynb filter=lfs diff=lfs merge=lfs -text
