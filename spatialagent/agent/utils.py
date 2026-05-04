@@ -18,8 +18,14 @@ def load_all_tools(save_path: str = "./experiments", data_path: str = "./data"):
     # Configure tool paths
     from spatialagent.tool.coding import configure_coding_tools
     from spatialagent.tool.databases import configure_database_tools
+    from spatialagent.tool.analytics import configure_analytics_tools
+    from spatialagent.tool.interpretation import configure_interpretation_tools
+    from spatialagent.tool.subagent import configure_subagent_tools
     configure_coding_tools(save_path, data_path)
     configure_database_tools(data_path)
+    configure_analytics_tools(save_path)
+    configure_interpretation_tools(save_path)
+    configure_subagent_tools(save_path)
 
     # Map module names to their tool modules
     tool_modules = {

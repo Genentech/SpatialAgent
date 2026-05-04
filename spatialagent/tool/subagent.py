@@ -14,6 +14,15 @@ from os.path import exists
 from langchain_core.tools import tool
 from pydantic import Field
 
+# Module-level config (set via configure_subagent_tools)
+_config = {
+    "save_path": "./experiments",
+}
+
+def configure_subagent_tools(save_path: str = "./experiments"):
+    """Configure paths for subagent tools. Call this before using the tools."""
+    _config["save_path"] = save_path
+
 # Default model for subagent LLM calls (fallback if agent model not set)
 DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
 
@@ -78,7 +87,7 @@ def _resize_image_if_needed(image_path: str, max_size_bytes: int = 4_000_000) ->
 def report_subagent(
     user_query: Annotated[str, Field(description="The research question being investigated (e.g., 'How does cellular composition change during disease progression?')")],
     data_info: Annotated[str, Field(description="Brief dataset description including species, tissue, technology, and conditions (e.g., 'MERFISH spatial transcriptomics of mouse colon, 4 disease stages')")],
-    save_path: Annotated[str, Field(description="Directory path containing analysis outputs (figures, CSVs, observation_log.jsonl)")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory path containing analysis outputs (figures, CSVs, observation_log.jsonl)")] = None,
 ) -> str:
     """Generate a publication-quality research report by analyzing all saved artifacts.
 
@@ -115,6 +124,7 @@ def report_subagent(
     from ..agent import make_llm
     import glob
 
+    save_path = save_path or _config["save_path"]
     print("🔬 Starting Deep Research Report Subagent...")
 
     model = _get_subagent_model()
@@ -444,7 +454,7 @@ def verification_subagent(
     user_query: Annotated[str, Field(description="The research question being investigated (e.g., 'How does cellular composition change during disease?')")],
     conclusions: Annotated[str, Field(description="The conclusions to verify, as a string (e.g., '1) Immune cells increase 10-fold. 2) Epithelial cells decrease 50%.')")],
     data_info: Annotated[str, Field(description="Brief dataset description (e.g., 'MERFISH mouse colon, 50k cells, 4 disease stages')")],
-    save_path: Annotated[str, Field(description="Directory path containing analysis outputs (figures, CSVs, observation_log.jsonl)")] = "./experiments",
+    save_path: Annotated[str, Field(description="Directory path containing analysis outputs (figures, CSVs, observation_log.jsonl)")] = None,
 ) -> str:
     """Verify analysis conclusions against saved evidence (figures, data, observations).
 
@@ -479,6 +489,7 @@ def verification_subagent(
     from ..agent import make_llm
     import glob
 
+    save_path = save_path or _config["save_path"]
     print("🔍 Starting Conclusion Verification Subagent...")
 
     model = _get_subagent_model()

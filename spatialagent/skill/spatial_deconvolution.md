@@ -2,6 +2,14 @@
 
 Estimate cell type compositions in spatial transcriptomics spots using deep learning methods from scvi-tools and cell2location.
 
+## Platform Applicability
+
+**This is the correct workflow for cell type identification on spot-based platforms** (Visium, Slide-seq, ST). Each spot contains multiple cells, so deconvolution estimates cell type **proportions** rather than assigning a single label. If a user asks to "annotate cell types" on Visium or other spot-based data, this is the appropriate skill.
+
+For single-cell resolution platforms (MERFISH, Xenium, CosMx, SeqFISH), use the `annotation` skill instead.
+
+---
+
 ## Prerequisites
 
 **Required**:

@@ -151,7 +151,7 @@ def search_panglao(
         output_lines.append(f"\nSaved to: {save_csv}")
 
     output = "\n".join(output_lines)
-    print(output)
+    # print(output)  # Removed: duplicates output in agent's observation when tool is called via execute_python
     return output
 
 
@@ -161,12 +161,21 @@ def search_panglao(
 
 @tool
 def search_czi_datasets(
-    query: Annotated[str, Field(description="Query describing tissue, condition, and organism (e.g., 'liver, breast cancer, Homo sapiens')")],
+    query: Annotated[str, Field(description="Query describing the condition or context (e.g., 'breast cancer', 'normal development'). Do NOT include organism or tissue here — use the dedicated parameters instead.")],
     n_datasets: Annotated[int, Field(description="Number of top datasets to return")] = 1,
+    organism: Annotated[str, Field(description="Filter by organism (e.g., 'Mus musculus', 'Homo sapiens'). Always pass this when the organism is known.")] = None,
+    tissue: Annotated[str, Field(description="Filter by tissue keyword (e.g., 'lung', 'brain'). Matches against tissue and tissue_general columns. Always pass this when the tissue is known.")] = None,
 ) -> str:
     """Search CZI CELLxGENE Census for reference single-cell datasets.
 
-    Input is a string containing: tissue, condition, and organism.
+    When the query mentions an organism or tissue, pass them as the dedicated
+    ``organism`` and ``tissue`` parameters so they are used as hard pre-filters
+    before embedding-based ranking. The ``query`` should contain only the
+    condition or context (e.g., 'breast cancer', 'normal development').
+
+    If strict filtering returns fewer than ``n_datasets`` results, the function
+    progressively relaxes filters (drop tissue first, then organism) and
+    includes a warning in the output.
 
     Returns:
         str: Formatted string with dataset info. Example output:
@@ -204,6 +213,58 @@ def search_czi_datasets(
 
     df = pd.read_csv(metadata_path)
 
+    # Pre-filter by organism and tissue with controlled relaxation
+    filter_warnings = []
+    applied_organism = None
+    applied_tissue = None
+
+    if organism or tissue:
+        # Try strict filter: both organism and tissue
+        df_strict = df
+        if organism:
+            df_strict = df_strict[df_strict["organism"] == organism]
+        if tissue:
+            tissue_lower = tissue.lower()
+            df_strict = df_strict[
+                df_strict["tissue"].str.lower().str.contains(tissue_lower, na=False)
+                | df_strict["tissue_general"].str.lower().str.contains(tissue_lower, na=False)
+            ]
+
+        if len(df_strict) >= n_datasets:
+            df = df_strict
+            applied_organism = organism
+            applied_tissue = tissue
+        elif organism and tissue:
+            # Relax: drop tissue, keep organism only
+            df_org_only = df[df["organism"] == organism]
+            if len(df_org_only) >= n_datasets:
+                df = df_org_only
+                applied_organism = organism
+                filter_warnings.append(
+                    f"Note: Only {len(df_strict)} datasets matched "
+                    f"organism='{organism}' AND tissue='{tissue}' "
+                    f"(fewer than {n_datasets} requested). "
+                    f"Relaxed to organism='{organism}' only "
+                    f"({len(df_org_only)} datasets)."
+                )
+            else:
+                filter_warnings.append(
+                    f"Note: Only {len(df_org_only)} datasets matched "
+                    f"organism='{organism}' (fewer than {n_datasets} "
+                    f"requested). Using all {len(df)} datasets."
+                )
+        else:
+            # Single filter with too few results
+            filter_name = "organism" if organism else "tissue"
+            filter_val = organism if organism else tissue
+            filter_warnings.append(
+                f"Note: Only {len(df_strict)} datasets matched "
+                f"{filter_name}='{filter_val}' (fewer than {n_datasets} "
+                f"requested). Using all {len(df)} datasets."
+            )
+
+    df = df.reset_index(drop=True)
+
     # Create descriptions for each dataset
     df["description"] = (
         df["organism"].astype(str) + "; " +
@@ -218,7 +279,13 @@ def search_czi_datasets(
     query_embedding = _embed_with_retry(llm_embed_query, [query])
 
     # Check for cached description embeddings (use effective_model for cache key)
-    cache_key = _get_cache_key("czi_census", effective_model, len(descriptions))
+    # Include actually-applied filters in identifier to avoid cache collisions
+    db_id = "czi_census"
+    if applied_organism:
+        db_id += f"_{applied_organism.replace(' ', '_')}"
+    if applied_tissue:
+        db_id += f"_{applied_tissue.lower()}"
+    cache_key = _get_cache_key(db_id, effective_model, len(descriptions))
     desc_embeddings = _load_cached_embeddings(cache_key)
 
     if desc_embeddings is None:
@@ -249,7 +316,8 @@ def search_czi_datasets(
         results.append(result_str)
 
     output = "\n".join(results)
-    print(output)
+    if filter_warnings:
+        output = "\n".join(filter_warnings) + "\n\n" + output
     return output
 
 
@@ -364,7 +432,7 @@ def search_cellmarker2(
         output_lines.append(f"\nSaved to: {save_csv}")
 
     output = "\n".join(output_lines)
-    print(output)
+    # print(output)  # Removed: duplicates output in agent's observation when tool is called via execute_python
     return output
 
 
@@ -411,7 +479,6 @@ def extract_czi_markers(
 
     if exists(save_csv):
         msg = f"CZI reference data already exists at {save_csv}"
-        print(msg)
         return msg
 
     print(f"[extract_czi_markers] Processing {dataset_id}...")
@@ -422,89 +489,92 @@ def extract_czi_markers(
     # Read from CZI Census
     census = cellxgene_census.open_soma(census_version="latest")
 
-    all_results = []
+    try:
+        all_results = []
 
-    for did in dataset_ids:
-        # Query dataset
-        query = f'dataset_id == "{did}"'
-        adata = cellxgene_census.get_anndata(census, organism, obs_value_filter=query)
+        for did in dataset_ids:
+            # Query dataset
+            query = f'dataset_id == "{did}"'
+            adata = cellxgene_census.get_anndata(census, organism, obs_value_filter=query)
 
-        # Get cell types
-        cell_types = adata.obs["cell_type"].value_counts()
+            # Get cell types
+            cell_types = adata.obs["cell_type"].value_counts()
 
-        for cell_type, count in cell_types.items():
-            # Get cell_type_id with error handling for empty results
-            cell_type_mask = adata.obs["cell_type"] == cell_type
-            cell_type_ids = adata.obs[cell_type_mask]["cell_type_ontology_term_id"].values
+            for cell_type, count in cell_types.items():
+                # Get cell_type_id with error handling for empty results
+                cell_type_mask = adata.obs["cell_type"] == cell_type
+                cell_type_ids = adata.obs[cell_type_mask]["cell_type_ontology_term_id"].values
 
-            if len(cell_type_ids) == 0:
-                continue  # Skip if no cell_type_ontology_term_id found
+                if len(cell_type_ids) == 0:
+                    continue  # Skip if no cell_type_ontology_term_id found
 
-            cell_type_id = cell_type_ids[0]
+                cell_type_id = cell_type_ids[0]
 
-            # Get marker genes from CellGuide
-            # Note: CellGuide uses underscore format (CL_0000182) not colon format (CL:0000182)
-            cellguide_id = cell_type_id.replace(":", "_")
+                # Get marker genes from CellGuide
+                # Note: CellGuide uses underscore format (CL_0000182) not colon format (CL:0000182)
+                cellguide_id = cell_type_id.replace(":", "_")
 
-            comp_genes = []
-            cano_genes = []
+                comp_genes = []
+                cano_genes = []
 
-            # Limit marker genes to top N for readability (CellGuide can return 500+ genes)
-            MAX_MARKER_GENES = 100
+                # Limit marker genes to top N for readability (CellGuide can return 500+ genes)
+                MAX_MARKER_GENES = 100
 
-            # Helper to convert gene symbols based on organism
-            # CellGuide returns mouse-format symbols (title case like 'Grin2b')
-            # Human genes should be uppercase (GRIN2B), mouse stays title case
-            def normalize_gene_symbol(gene: str) -> str:
-                if organism == "Homo sapiens":
-                    return gene.upper()
-                return gene  # Keep mouse format as-is
+                # Helper to convert gene symbols based on organism
+                # CellGuide returns mouse-format symbols (title case like 'Grin2b')
+                # Human genes should be uppercase (GRIN2B), mouse stays title case
+                def normalize_gene_symbol(gene: str) -> str:
+                    if organism == "Homo sapiens":
+                        return gene.upper()
+                    return gene  # Keep mouse format as-is
 
-            try:
-                comp_markers = get_cellguide_file(f"computational_marker_genes/{cellguide_id}.json")
-                if comp_markers.status_code == 200 and comp_markers.text:
-                    comp_markers_df = pd.DataFrame.from_records(comp_markers.json())
-                    # Gene symbol is in 'symbol' column, not 'marker_gene'
-                    if "symbol" in comp_markers_df.columns:
-                        comp_genes = [normalize_gene_symbol(g) for g in comp_markers_df["symbol"].tolist()[:MAX_MARKER_GENES]]
-                    elif "marker_gene" in comp_markers_df.columns:
-                        comp_genes = [normalize_gene_symbol(g) for g in comp_markers_df["marker_gene"].tolist()[:MAX_MARKER_GENES]]
-            except Exception:
-                pass  # CellGuide may not have data for all cell types
+                try:
+                    comp_markers = get_cellguide_file(f"computational_marker_genes/{cellguide_id}.json")
+                    if comp_markers.status_code == 200 and comp_markers.text:
+                        comp_markers_df = pd.DataFrame.from_records(comp_markers.json())
+                        # Gene symbol is in 'symbol' column, not 'marker_gene'
+                        if "symbol" in comp_markers_df.columns:
+                            comp_genes = [normalize_gene_symbol(g) for g in comp_markers_df["symbol"].tolist()[:MAX_MARKER_GENES]]
+                        elif "marker_gene" in comp_markers_df.columns:
+                            comp_genes = [normalize_gene_symbol(g) for g in comp_markers_df["marker_gene"].tolist()[:MAX_MARKER_GENES]]
+                except Exception:
+                    pass  # CellGuide may not have data for all cell types
 
-            try:
-                cano_markers = get_cellguide_file(f"canonical_marker_genes/{cellguide_id}.json")
-                if cano_markers.status_code == 200 and cano_markers.text:
-                    cano_markers_df = pd.DataFrame.from_records(cano_markers.json())
-                    if "symbol" in cano_markers_df.columns:
-                        cano_genes = [normalize_gene_symbol(g) for g in cano_markers_df["symbol"].tolist()[:MAX_MARKER_GENES]]
-                    elif "marker_gene" in cano_markers_df.columns:
-                        cano_genes = [normalize_gene_symbol(g) for g in cano_markers_df["marker_gene"].tolist()[:MAX_MARKER_GENES]]
-            except Exception:
-                pass
+                try:
+                    cano_markers = get_cellguide_file(f"canonical_marker_genes/{cellguide_id}.json")
+                    if cano_markers.status_code == 200 and cano_markers.text:
+                        cano_markers_df = pd.DataFrame.from_records(cano_markers.json())
+                        if "symbol" in cano_markers_df.columns:
+                            cano_genes = [normalize_gene_symbol(g) for g in cano_markers_df["symbol"].tolist()[:MAX_MARKER_GENES]]
+                        elif "marker_gene" in cano_markers_df.columns:
+                            cano_genes = [normalize_gene_symbol(g) for g in cano_markers_df["marker_gene"].tolist()[:MAX_MARKER_GENES]]
+                except Exception:
+                    pass
 
-            all_results.append({
-                "cell_type": cell_type,
-                "cell_type_id": cell_type_id,
-                "n_cells": count,
-                "marker_genes": comp_genes,
-                "cano_marker_genes": cano_genes,
-            })
+                all_results.append({
+                    "cell_type": cell_type,
+                    "cell_type_id": cell_type_id,
+                    "n_cells": count,
+                    "marker_genes": comp_genes,
+                    "cano_marker_genes": cano_genes,
+                })
 
-    # Save
-    df_results = pd.DataFrame(all_results)
-    df_results.to_csv(save_csv, index=False)
+        # Save
+        df_results = pd.DataFrame(all_results)
+        df_results.to_csv(save_csv, index=False)
 
-    # Count how many cell types have marker genes
-    n_with_markers = sum(1 for r in all_results if r["marker_genes"] or r["cano_marker_genes"])
-    n_without_markers = len(all_results) - n_with_markers
+        # Count how many cell types have marker genes
+        n_with_markers = sum(1 for r in all_results if r["marker_genes"] or r["cano_marker_genes"])
+        n_without_markers = len(all_results) - n_with_markers
 
-    msg = f"Successfully processed {len(dataset_ids)} CZI dataset(s) with {len(all_results)} cell types. Saved to {save_csv}"
-    if n_without_markers > 0:
-        msg += f"\nNote: {n_with_markers} cell types have marker genes from CellGuide, {n_without_markers} do not (may need PanglaoDB/CellMarker2 lookup)."
+        msg = f"Successfully processed {len(dataset_ids)} CZI dataset(s) with {len(all_results)} cell types. Saved to {save_csv}"
+        if n_without_markers > 0:
+            msg += f"\nNote: {n_with_markers} cell types have marker genes from CellGuide, {n_without_markers} do not (may need PanglaoDB/CellMarker2 lookup)."
 
-    print(msg)
-    return msg
+        return msg
+
+    finally:
+        census.close()
 
 
 # =============================================================================
@@ -689,7 +759,7 @@ def query_tissue_expression(
             results.append(f"  {tissue}: {median_tpm:.2f} TPM")
 
         output = "\n".join(results)
-        print(output)
+        # print(output)  # Removed: duplicates output in agent's observation when tool is called via execute_python
         return output
 
     except Exception as e:
@@ -763,7 +833,7 @@ def query_celltype_genesets(
             results.append(f"    Marker genes: {', '.join(genes[:10])}")
 
         output = "\n".join(results)
-        print(output)
+        # print(output)  # Removed: duplicates output in agent's observation when tool is called via execute_python
         return output
 
     except Exception as e:
@@ -842,7 +912,7 @@ def validate_genes_expression(
         results.append(f"\nNot found in ARCHS4 ({len(not_found)}): {', '.join(not_found)}")
 
     output = "\n".join(results)
-    print(output)
+    # print(output)  # Removed: duplicates output in agent's observation when tool is called via execute_python
     return output
 
 
@@ -1139,5 +1209,5 @@ def query_disease_genes(
     results.append(f"\nAll genes: {', '.join(sorted(all_genes))}")
 
     output = "\n".join(results)
-    print(output)
+    # print(output)  # Removed: duplicates output in agent's observation when tool is called via execute_python
     return output
