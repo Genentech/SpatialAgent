@@ -2,8 +2,6 @@
 
 This is the official implementation for **SpatialAgent: An autonomous AI agent for spatial biology**.
 
-Contact wang.hanchen@gene.com or hanchenw@stanford.edu if you have any questions.
-
 ![teaser](teaser.png)
 
 ### Overview
